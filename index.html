@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>My Todo Dashboard</h1>
+
+        <!-- Input area for adding new tasks -->
+        <div class="add-task">
+            <input type="text" id="taskInput" placeholder="What do you need to do?">
+            <button id="addButton">Add Task</button>
+        </div>
+
+        <!-- Where tasks will appear -->
+        <ul id="taskList"></ul>
+
+        <!-- Simple stats -->
+        <div class="stats">
+            <span id="taskCount">0 tasks</span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
