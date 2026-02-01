@@ -1,6 +1,5 @@
 /*
-  STYLE.CSS - Controls how everything LOOKS
-  Think of HTML as the skeleton, CSS as the skin and clothes
+  STYLE.CSS - Todo Dashboard with Kanban Board and Tags
 */
 
 * {
@@ -17,7 +16,7 @@ body {
 }
 
 .container {
-    max-width: 500px;
+    max-width: 1200px;
     margin: 0 auto;
     background: #ffffff;
     border-radius: 16px;
@@ -32,15 +31,18 @@ h1 {
     font-size: 28px;
 }
 
-/* The input area at the top */
+/* ============ INPUT AREA ============ */
+
 .add-task {
     display: flex;
     gap: 10px;
     margin-bottom: 30px;
+    flex-wrap: wrap;
 }
 
 #taskInput {
     flex: 1;
+    min-width: 200px;
     padding: 12px 16px;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
@@ -68,67 +70,475 @@ h1 {
     background: #357abd;
 }
 
-/* The task list */
-#taskList {
-    list-style: none;
-}
-
-.task-item {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    background: #f8f9fa;
+.secondary-btn {
+    padding: 12px 24px;
+    background: #6c757d;
+    color: white;
+    border: none;
     border-radius: 8px;
-    margin-bottom: 10px;
-    transition: all 0.2s;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
-.task-item:hover {
+.secondary-btn:hover {
+    background: #545b62;
+}
+
+.primary-btn {
+    padding: 12px 24px;
+    background: #4a90d9;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s;
+    margin-top: 15px;
+}
+
+.primary-btn:hover {
+    background: #357abd;
+}
+
+/* ============ KANBAN BOARD ============ */
+
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    margin-bottom: 20px;
+    min-height: 400px;
+}
+
+.kanban-column {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+}
+
+.column-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #e0e0e0;
+}
+
+.column-header h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #666;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+.column-count {
+    background: #e0e0e0;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #666;
+    font-weight: 600;
+}
+
+/* Column-specific header colors */
+.kanban-column[data-status="not-started"] .column-header {
+    border-bottom-color: #6c757d;
+}
+
+.kanban-column[data-status="in-progress"] .column-header {
+    border-bottom-color: #4a90d9;
+}
+
+.kanban-column[data-status="at-risk"] .column-header {
+    border-bottom-color: #ffc107;
+}
+
+.kanban-column[data-status="completed"] .column-header {
+    border-bottom-color: #28a745;
+}
+
+/* Tasks container in column */
+.column-tasks {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 100px;
+    padding: 5px;
+    border-radius: 8px;
+    transition: background 0.2s, border 0.2s;
+}
+
+/* Drop zone visual feedback */
+.column-tasks.drag-over {
+    background: rgba(74, 144, 217, 0.1);
+    border: 2px dashed #4a90d9;
+}
+
+/* ============ TASK CARDS ============ */
+
+.task-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: grab;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.task-card.dragging {
+    opacity: 0.5;
+    transform: rotate(3deg);
+    cursor: grabbing;
+}
+
+.task-card .task-text {
+    display: block;
+    margin: 8px 0;
+    font-size: 14px;
+    color: #333;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+.task-card .task-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.task-card .edit-btn,
+.task-card .delete-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0.5;
+    transition: opacity 0.2s, background 0.2s;
+    font-size: 16px;
+}
+
+.task-card .edit-btn:hover {
+    opacity: 1;
     background: #e9ecef;
 }
 
-.task-item.completed {
-    opacity: 0.6;
+.task-card .delete-btn:hover {
+    opacity: 1;
+    background: #f8d7da;
+    color: #dc3545;
 }
 
-.task-item.completed .task-text {
+/* Completed column task styling */
+.kanban-column[data-status="completed"] .task-card {
+    opacity: 0.7;
+}
+
+.kanban-column[data-status="completed"] .task-text {
     text-decoration: line-through;
     color: #888;
 }
 
-.task-checkbox {
-    width: 22px;
-    height: 22px;
-    margin-right: 15px;
-    cursor: pointer;
+/* ============ TAGS ============ */
+
+.task-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
 }
 
-.task-text {
-    flex: 1;
-    font-size: 16px;
+.tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    color: #ffffff;
+    font-weight: 500;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+/* ============ MODALS ============ */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal.hidden {
+    display: none;
+}
+
+.modal-content {
+    background: #ffffff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 450px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #1a1a2e;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
     color: #333;
 }
 
-.delete-btn {
+.modal-body {
+    padding: 20px;
+}
+
+.modal-body h4 {
+    margin-bottom: 10px;
+    color: #666;
+}
+
+/* Add Tag Form */
+.add-tag {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.add-tag input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.add-tag input[type="text"]:focus {
+    outline: none;
+    border-color: #4a90d9;
+}
+
+.add-tag input[type="color"] {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 0;
+}
+
+#addTagBtn {
+    padding: 10px 16px;
+    background: #4a90d9;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+#addTagBtn:hover {
+    background: #357abd;
+}
+
+/* Tag List in Modal */
+.tag-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tag-list-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.tag-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tag-color-swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.delete-tag-btn {
     background: none;
     border: none;
     color: #dc3545;
-    font-size: 20px;
     cursor: pointer;
-    padding: 5px 10px;
-    opacity: 0;
-    transition: opacity 0.2s;
+    font-size: 20px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
 }
 
-.task-item:hover .delete-btn {
-    opacity: 1;
+.delete-tag-btn:hover {
+    background: #f8d7da;
 }
 
-/* Stats at the bottom */
+/* Tag Checkboxes in Edit Modal */
+.tag-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 15px 0;
+}
+
+.tag-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s, transform 0.2s;
+    color: #fff;
+    font-size: 13px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.tag-checkbox-label:hover {
+    transform: scale(1.05);
+}
+
+.tag-checkbox-label:has(input:checked) {
+    border-color: #333;
+}
+
+.tag-checkbox-label input {
+    display: none;
+}
+
+.edit-task-text {
+    font-size: 16px;
+    color: #333;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.no-tags-message {
+    color: #666;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+}
+
+/* ============ STATS ============ */
+
 .stats {
     text-align: center;
     padding-top: 20px;
     border-top: 1px solid #e0e0e0;
     color: #666;
     font-size: 14px;
+}
+
+/* ============ RESPONSIVE DESIGN ============ */
+
+/* Tablet */
+@media (max-width: 900px) {
+    .kanban-board {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .kanban-column {
+        min-height: 200px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+    body {
+        padding: 20px 10px;
+    }
+
+    .container {
+        padding: 20px 15px;
+    }
+
+    h1 {
+        font-size: 24px;
+    }
+
+    .kanban-board {
+        grid-template-columns: 1fr;
+    }
+
+    .kanban-column {
+        min-height: auto;
+    }
+
+    .add-task {
+        flex-direction: column;
+    }
+
+    #taskInput {
+        min-width: 100%;
+    }
+
+    #addButton,
+    .secondary-btn {
+        width: 100%;
+    }
+
+    .add-tag {
+        flex-wrap: wrap;
+    }
+
+    .add-tag input[type="text"] {
+        min-width: 100%;
+    }
 }

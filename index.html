@@ -14,14 +14,81 @@
         <div class="add-task">
             <input type="text" id="taskInput" placeholder="What do you need to do?">
             <button id="addButton">Add Task</button>
+            <button id="manageTagsBtn" class="secondary-btn">Manage Tags</button>
         </div>
 
-        <!-- Where tasks will appear -->
-        <ul id="taskList"></ul>
+        <!-- Kanban Board -->
+        <div class="kanban-board">
+            <div class="kanban-column" data-status="not-started">
+                <div class="column-header">
+                    <h3>Not Started</h3>
+                    <span class="column-count">0</span>
+                </div>
+                <div class="column-tasks" id="not-started-tasks"></div>
+            </div>
+
+            <div class="kanban-column" data-status="in-progress">
+                <div class="column-header">
+                    <h3>In Progress</h3>
+                    <span class="column-count">0</span>
+                </div>
+                <div class="column-tasks" id="in-progress-tasks"></div>
+            </div>
+
+            <div class="kanban-column" data-status="at-risk">
+                <div class="column-header">
+                    <h3>At Risk</h3>
+                    <span class="column-count">0</span>
+                </div>
+                <div class="column-tasks" id="at-risk-tasks"></div>
+            </div>
+
+            <div class="kanban-column" data-status="completed">
+                <div class="column-header">
+                    <h3>Completed</h3>
+                    <span class="column-count">0</span>
+                </div>
+                <div class="column-tasks" id="completed-tasks"></div>
+            </div>
+        </div>
 
         <!-- Simple stats -->
         <div class="stats">
             <span id="taskCount">0 tasks</span>
+        </div>
+    </div>
+
+    <!-- Tag Management Modal -->
+    <div id="tagModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Manage Tags</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="add-tag">
+                    <input type="text" id="tagNameInput" placeholder="Tag name">
+                    <input type="color" id="tagColorInput" value="#4a90d9">
+                    <button id="addTagBtn">Add Tag</button>
+                </div>
+                <ul id="tagList" class="tag-list"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Edit Modal (for assigning tags) -->
+    <div id="taskEditModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Task</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="editTaskText" class="edit-task-text"></p>
+                <h4>Assign Tags:</h4>
+                <div id="tagCheckboxes" class="tag-checkboxes"></div>
+                <button id="saveTaskBtn" class="primary-btn">Save</button>
+            </div>
         </div>
     </div>
 
