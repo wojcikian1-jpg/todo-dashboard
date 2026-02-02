@@ -8,13 +8,31 @@
 </head>
 <body>
     <div class="container">
-        <h1>My Todo Dashboard</h1>
+        <h1>My To Do Dashboard</h1>
 
         <!-- Input area for adding new tasks -->
         <div class="add-task">
-            <input type="text" id="taskInput" placeholder="What do you need to do?">
-            <button id="addButton">Add Task</button>
-            <button id="manageTagsBtn" class="secondary-btn">Manage Tags</button>
+            <div class="task-inputs">
+                <input type="text" id="taskInput" placeholder="Task title...">
+                <input type="text" id="taskDescription" placeholder="Description (optional)...">
+            </div>
+            <div class="task-buttons">
+                <button id="addButton">Add Task</button>
+                <button id="manageTagsBtn" class="secondary-btn">Manage Tags</button>
+            </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <span class="filter-label">Filter:</span>
+            <div class="filter-dropdown-container">
+                <button id="filterDropdownBtn" class="filter-dropdown-btn">
+                    <span id="filterDisplayText">All Tasks</span>
+                </button>
+                <div id="filterDropdownMenu" class="filter-dropdown-menu">
+                    <!-- Options populated by JS -->
+                </div>
+            </div>
         </div>
 
         <!-- Kanban Board -->
@@ -37,7 +55,7 @@
 
             <div class="kanban-column" data-status="at-risk">
                 <div class="column-header">
-                    <h3>At Risk</h3>
+                    <h3>Waiting on Other Team(s)</h3>
                     <span class="column-count">0</span>
                 </div>
                 <div class="column-tasks" id="at-risk-tasks"></div>
@@ -76,6 +94,22 @@
         </div>
     </div>
 
+    <!-- Task View Modal (read-only detail view) -->
+    <div id="taskViewModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Task Details</h2>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="viewTaskTags" class="view-task-tags"></div>
+                <h3 id="viewTaskTitle" class="view-task-title"></h3>
+                <p id="viewTaskDescription" class="view-task-description"></p>
+                <button id="editFromViewBtn" class="primary-btn">Edit Task</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Task Edit Modal (for assigning tags) -->
     <div id="taskEditModal" class="modal hidden">
         <div class="modal-content">
@@ -85,6 +119,8 @@
             </div>
             <div class="modal-body">
                 <p id="editTaskText" class="edit-task-text"></p>
+                <h4>Description:</h4>
+                <textarea id="editTaskDescription" class="edit-description" placeholder="Add a description..." rows="3"></textarea>
                 <h4>Assign Tags:</h4>
                 <div id="tagCheckboxes" class="tag-checkboxes"></div>
                 <button id="saveTaskBtn" class="primary-btn">Save</button>

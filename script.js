@@ -14,9 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let tags = [];
     let currentEditingTaskId = null;
     let draggedTaskId = null;
+    let selectedFilterTags = []; // Empty array means "All", otherwise array of tag IDs
+    let filterDropdownOpen = false;
 
     // ============ DOM REFERENCES ============
     const taskInput = document.getElementById('taskInput');
+    const taskDescription = document.getElementById('taskDescription');
     const addButton = document.getElementById('addButton');
     const manageTagsBtn = document.getElementById('manageTagsBtn');
     const taskCount = document.getElementById('taskCount');
@@ -31,6 +34,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Modals
     const tagModal = document.getElementById('tagModal');
+    const taskViewModal = document.getElementById('taskViewModal');
     const taskEditModal = document.getElementById('taskEditModal');
 
     // ============ INITIALIZATION ============
@@ -39,6 +43,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function init() {
         loadData();
         migrateData();
+        renderFilterTags();
+        setupFilterDropdown();
         renderBoard();
         setupEventListeners();
         setupDragAndDrop();
@@ -60,12 +66,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 return {
                     ...task,
                     status: task.completed ? 'completed' : 'not-started',
-                    tags: task.tags || []
+                    tags: task.tags || [],
+                    description: task.description || ''
                 };
             }
             if (!task.tags) {
                 needsMigration = true;
                 task.tags = [];
+            }
+            if (task.description === undefined) {
+                needsMigration = true;
+                task.description = '';
             }
             return task;
         });
@@ -89,9 +100,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const text = taskInput.value.trim();
         if (text === '') return;
 
+        const description = taskDescription ? taskDescription.value.trim() : '';
+
         const task = {
             id: Date.now(),
             text: text,
+            description: description,
             completed: false,
             status: 'not-started',
             tags: []
@@ -102,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderBoard();
 
         taskInput.value = '';
+        if (taskDescription) taskDescription.value = '';
         taskInput.focus();
     }
 
@@ -148,6 +163,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tags.push(tag);
         saveTags();
         renderTagList();
+        renderFilterTags();
     }
 
     function deleteTag(tagId) {
@@ -161,7 +177,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }));
         saveTasks();
 
+        // Remove deleted tag from filter if active
+        selectedFilterTags = selectedFilterTags.filter(id => id !== tagId);
+
         renderTagList();
+        renderFilterTags();
         renderBoard();
     }
 
@@ -177,6 +197,11 @@ document.addEventListener('DOMContentLoaded', function() {
             if (col) col.innerHTML = '';
         });
 
+        // Filter tasks by selected tags (empty array = show all)
+        const filteredTasks = selectedFilterTags.length === 0
+            ? tasks
+            : tasks.filter(task => task.tags && selectedFilterTags.some(tagId => task.tags.includes(tagId)));
+
         // Group tasks by status
         const tasksByStatus = {
             'not-started': [],
@@ -185,7 +210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'completed': []
         };
 
-        tasks.forEach(task => {
+        filteredTasks.forEach(task => {
             if (tasksByStatus[task.status]) {
                 tasksByStatus[task.status].push(task);
             }
@@ -219,27 +244,44 @@ document.addEventListener('DOMContentLoaded', function() {
         card.draggable = true;
         card.dataset.taskId = task.id;
 
-        // Build tags HTML
+        // Build tags HTML and get first tag color for border
         let tagsHtml = '';
+        let firstTagColor = null;
         if (task.tags && task.tags.length > 0) {
             tagsHtml = '<div class="task-tags">';
-            task.tags.forEach(tagId => {
+            task.tags.forEach((tagId, index) => {
                 const tag = getTagById(tagId);
                 if (tag) {
+                    if (index === 0) firstTagColor = tag.color;
                     tagsHtml += `<span class="tag" style="background-color: ${tag.color}">${escapeHtml(tag.name)}</span>`;
                 }
             });
             tagsHtml += '</div>';
         }
 
+        // Apply left border color based on first tag
+        if (firstTagColor) {
+            card.style.borderLeft = `4px solid ${firstTagColor}`;
+        }
+
+        const descriptionHtml = task.description
+            ? `<p class="task-description">${escapeHtml(task.description)}</p>`
+            : '';
+
         card.innerHTML = `
             ${tagsHtml}
             <span class="task-text">${escapeHtml(task.text)}</span>
+            ${descriptionHtml}
             <div class="task-actions">
-                <button class="edit-btn" title="Edit tags">&#9998;</button>
+                <button class="edit-btn" title="Edit task">&#9998;</button>
                 <button class="delete-btn" title="Delete">&times;</button>
             </div>
         `;
+
+        // Click on card to view details
+        card.addEventListener('click', () => {
+            openTaskViewModal(task.id);
+        });
 
         // Add event listeners
         card.querySelector('.edit-btn').addEventListener('click', (e) => {
@@ -280,6 +322,95 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function renderFilterTags() {
+        const menu = document.getElementById('filterDropdownMenu');
+        const displayText = document.getElementById('filterDisplayText');
+        if (!menu || !displayText) return;
+
+        menu.innerHTML = '';
+
+        // Add "All" option
+        const allOption = document.createElement('label');
+        allOption.className = 'filter-option' + (selectedFilterTags.length === 0 ? ' selected' : '');
+        allOption.innerHTML = `
+            <input type="checkbox" value="all" ${selectedFilterTags.length === 0 ? 'checked' : ''}>
+            <span class="filter-option-label">All Tasks</span>
+        `;
+        allOption.querySelector('input').addEventListener('change', () => {
+            selectedFilterTags = [];
+            renderFilterTags();
+            renderBoard();
+        });
+        menu.appendChild(allOption);
+
+        // Add option for each tag
+        tags.forEach(tag => {
+            const isSelected = selectedFilterTags.includes(tag.id);
+            const option = document.createElement('label');
+            option.className = 'filter-option' + (isSelected ? ' selected' : '');
+            option.innerHTML = `
+                <input type="checkbox" value="${tag.id}" ${isSelected ? 'checked' : ''}>
+                <span class="filter-option-color" style="background-color: ${tag.color}"></span>
+                <span class="filter-option-label">${escapeHtml(tag.name)}</span>
+            `;
+            option.querySelector('input').addEventListener('change', (e) => {
+                toggleFilterTag(tag.id, e.target.checked);
+            });
+            menu.appendChild(option);
+        });
+
+        // Update display text
+        updateFilterDisplayText();
+    }
+
+    function toggleFilterTag(tagId, isSelected) {
+        if (isSelected) {
+            if (!selectedFilterTags.includes(tagId)) {
+                selectedFilterTags.push(tagId);
+            }
+        } else {
+            selectedFilterTags = selectedFilterTags.filter(id => id !== tagId);
+        }
+        renderFilterTags();
+        renderBoard();
+    }
+
+    function updateFilterDisplayText() {
+        const displayText = document.getElementById('filterDisplayText');
+        if (!displayText) return;
+
+        if (selectedFilterTags.length === 0) {
+            displayText.textContent = 'All Tasks';
+        } else if (selectedFilterTags.length === 1) {
+            const tag = getTagById(selectedFilterTags[0]);
+            displayText.textContent = tag ? tag.name : 'All Tasks';
+        } else {
+            displayText.textContent = `${selectedFilterTags.length} tags selected`;
+        }
+    }
+
+    function setupFilterDropdown() {
+        const btn = document.getElementById('filterDropdownBtn');
+        const menu = document.getElementById('filterDropdownMenu');
+        if (!btn || !menu) return;
+
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterDropdownOpen = !filterDropdownOpen;
+            btn.classList.toggle('open', filterDropdownOpen);
+            menu.classList.toggle('open', filterDropdownOpen);
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.filter-dropdown-container')) {
+                filterDropdownOpen = false;
+                btn.classList.remove('open');
+                menu.classList.remove('open');
+            }
+        });
+    }
+
     function updateStats() {
         const total = tasks.length;
         const completed = tasks.filter(t => t.status === 'completed').length;
@@ -287,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let statsText = `${total} total tasks`;
         if (completed > 0) statsText += ` | ${completed} completed`;
-        if (atRisk > 0) statsText += ` | ${atRisk} at risk`;
+        if (atRisk > 0) statsText += ` | ${atRisk} waiting`;
 
         if (taskCount) {
             taskCount.textContent = statsText;
@@ -418,10 +549,19 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
 
-        // Save task tags button
+        // Save task button
         const saveTaskBtn = document.getElementById('saveTaskBtn');
         if (saveTaskBtn) {
-            saveTaskBtn.addEventListener('click', saveTaskTagsFromModal);
+            saveTaskBtn.addEventListener('click', saveTaskFromModal);
+        }
+
+        // Edit from view modal button
+        const editFromViewBtn = document.getElementById('editFromViewBtn');
+        if (editFromViewBtn) {
+            editFromViewBtn.addEventListener('click', () => {
+                if (taskViewModal) taskViewModal.classList.add('hidden');
+                openTaskEditModal(currentEditingTaskId);
+            });
         }
     }
 
@@ -434,6 +574,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    function openTaskViewModal(taskId) {
+        currentEditingTaskId = taskId;
+        const task = tasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        // Populate title
+        const viewTitle = document.getElementById('viewTaskTitle');
+        if (viewTitle) {
+            viewTitle.textContent = task.text;
+        }
+
+        // Populate description
+        const viewDescription = document.getElementById('viewTaskDescription');
+        if (viewDescription) {
+            viewDescription.textContent = task.description || 'No description provided.';
+            viewDescription.classList.toggle('no-description', !task.description);
+        }
+
+        // Populate tags
+        const viewTags = document.getElementById('viewTaskTags');
+        if (viewTags) {
+            viewTags.innerHTML = '';
+            if (task.tags && task.tags.length > 0) {
+                task.tags.forEach(tagId => {
+                    const tag = getTagById(tagId);
+                    if (tag) {
+                        const tagEl = document.createElement('span');
+                        tagEl.className = 'tag';
+                        tagEl.style.backgroundColor = tag.color;
+                        tagEl.textContent = tag.name;
+                        viewTags.appendChild(tagEl);
+                    }
+                });
+            }
+        }
+
+        if (taskViewModal) {
+            taskViewModal.classList.remove('hidden');
+        }
+    }
+
     function openTaskEditModal(taskId) {
         currentEditingTaskId = taskId;
         const task = tasks.find(t => t.id === taskId);
@@ -442,6 +623,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const editTaskText = document.getElementById('editTaskText');
         if (editTaskText) {
             editTaskText.textContent = task.text;
+        }
+
+        // Populate description field
+        const editDescription = document.getElementById('editTaskDescription');
+        if (editDescription) {
+            editDescription.value = task.description || '';
         }
 
         // Render tag checkboxes
@@ -471,18 +658,32 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function saveTaskTagsFromModal() {
+    function saveTaskFromModal() {
         if (!currentEditingTaskId) return;
 
         const checkboxes = document.querySelectorAll('#tagCheckboxes input[type="checkbox"]:checked');
         const selectedTagIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
 
-        updateTaskTags(currentEditingTaskId, selectedTagIds);
+        const editDescription = document.getElementById('editTaskDescription');
+        const newDescription = editDescription ? editDescription.value.trim() : '';
+
+        // Update task with tags and description
+        tasks = tasks.map(task => {
+            if (task.id === currentEditingTaskId) {
+                task.tags = selectedTagIds;
+                task.description = newDescription;
+            }
+            return task;
+        });
+        saveTasks();
+        renderBoard();
+
         closeAllModals();
     }
 
     function closeAllModals() {
         if (tagModal) tagModal.classList.add('hidden');
+        if (taskViewModal) taskViewModal.classList.add('hidden');
         if (taskEditModal) taskEditModal.classList.add('hidden');
         currentEditingTaskId = null;
     }
