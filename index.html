@@ -24,6 +24,9 @@
 
         <!-- Filter Bar -->
         <div class="filter-bar">
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search tasks...">
+            </div>
             <span class="filter-label">Filter:</span>
             <div class="filter-dropdown-container">
                 <button id="filterDropdownBtn" class="filter-dropdown-btn">
@@ -70,9 +73,16 @@
             </div>
         </div>
 
-        <!-- Simple stats -->
+        <!-- Stats and Archive -->
         <div class="stats">
             <span id="taskCount">0 tasks</span>
+            <div class="archive-controls">
+                <button id="archiveCompletedBtn" class="archive-btn">Archive Completed</button>
+                <label class="archive-toggle">
+                    <input type="checkbox" id="showArchivedToggle">
+                    <span>Show Archived</span>
+                </label>
+            </div>
         </div>
     </div>
 
@@ -94,7 +104,7 @@
         </div>
     </div>
 
-    <!-- Task View Modal (read-only detail view) -->
+    <!-- Task View Modal (detail view with notes & subtasks) -->
     <div id="taskViewModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -103,14 +113,36 @@
             </div>
             <div class="modal-body">
                 <div id="viewTaskTags" class="view-task-tags"></div>
+                <div class="view-task-badges">
+                    <span id="viewTaskPriority" class="view-task-priority"></span>
+                    <span id="viewTaskDueDate" class="view-task-due-date" style="display:none;"></span>
+                </div>
                 <h3 id="viewTaskTitle" class="view-task-title"></h3>
                 <p id="viewTaskDescription" class="view-task-description"></p>
-                <button id="editFromViewBtn" class="primary-btn">Edit Task</button>
+
+                <!-- Subtasks -->
+                <div id="viewSubtasks" class="view-subtasks"></div>
+
+                <!-- Notes -->
+                <div id="viewNotes" class="view-notes-section"></div>
+                <div class="add-note-section">
+                    <textarea id="newNoteInput" class="new-note-input" placeholder="Add a note..." rows="2"></textarea>
+                    <button id="addNoteBtn" class="add-note-btn">Add Note</button>
+                </div>
+
+                <!-- Timestamps -->
+                <div id="viewTaskMeta" class="view-task-meta"></div>
+
+                <!-- Action buttons -->
+                <div class="view-modal-actions">
+                    <button id="editFromViewBtn" class="primary-btn">Edit Task</button>
+                    <button id="viewArchiveBtn" class="secondary-btn" style="display:none; margin-top:8px;">Archive</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Task Edit Modal (for assigning tags) -->
+    <!-- Task Edit Modal -->
     <div id="taskEditModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
@@ -119,10 +151,36 @@
             </div>
             <div class="modal-body">
                 <p id="editTaskText" class="edit-task-text"></p>
+
                 <h4>Description:</h4>
                 <textarea id="editTaskDescription" class="edit-description" placeholder="Add a description..." rows="3"></textarea>
+
+                <h4>Due Date:</h4>
+                <input type="date" id="editDueDate" class="edit-due-date">
+
+                <h4>Priority:</h4>
+                <div id="prioritySelector" class="priority-selector">
+                    <label class="priority-option priority-high">
+                        <input type="radio" name="priority" value="high"> High
+                    </label>
+                    <label class="priority-option priority-medium">
+                        <input type="radio" name="priority" value="medium" checked> Medium
+                    </label>
+                    <label class="priority-option priority-low">
+                        <input type="radio" name="priority" value="low"> Low
+                    </label>
+                </div>
+
+                <h4>Subtasks:</h4>
+                <div class="subtask-add">
+                    <input type="text" id="subtaskInput" placeholder="Add a subtask..." class="subtask-input">
+                    <button id="addSubtaskBtn" class="add-subtask-btn">+</button>
+                </div>
+                <ul id="editSubtaskList" class="edit-subtask-list"></ul>
+
                 <h4>Assign Tags:</h4>
                 <div id="tagCheckboxes" class="tag-checkboxes"></div>
+
                 <button id="saveTaskBtn" class="primary-btn">Save</button>
             </div>
         </div>

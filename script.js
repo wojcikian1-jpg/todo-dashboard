@@ -2,9 +2,17 @@
   SCRIPT.JS - Todo Dashboard with Kanban Board and Tags
 
   Features:
-  - 4 Kanban columns: Not Started, In Progress, At Risk, Completed
+  - 4 Kanban columns: Not Started, In Progress, Waiting on Other Team(s), Completed
   - Drag and drop between columns
   - Tag system for categorizing tasks
+  - Due dates with overdue highlighting
+  - Priority levels (High / Medium / Low)
+  - Search bar
+  - Tag task counts
+  - Timestamps (created / updated)
+  - Notes / comments
+  - Subtasks / checklists
+  - Archive completed tasks
 */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -16,6 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let draggedTaskId = null;
     let selectedFilterTags = []; // Empty array means "All", otherwise array of tag IDs
     let filterDropdownOpen = false;
+    let searchQuery = '';
+    let showArchived = false;
+    let editingSubtasks = [];
 
     // ============ DOM REFERENCES ============
     const taskInput = document.getElementById('taskInput');
@@ -78,6 +89,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 needsMigration = true;
                 task.description = '';
             }
+            if (task.dueDate === undefined) {
+                needsMigration = true;
+                task.dueDate = null;
+            }
+            if (task.priority === undefined) {
+                needsMigration = true;
+                task.priority = 'medium';
+            }
+            if (task.createdAt === undefined) {
+                needsMigration = true;
+                task.createdAt = task.id;
+            }
+            if (task.updatedAt === undefined) {
+                needsMigration = true;
+                task.updatedAt = task.id;
+            }
+            if (task.notes === undefined) {
+                needsMigration = true;
+                task.notes = [];
+            }
+            if (task.subtasks === undefined) {
+                needsMigration = true;
+                task.subtasks = [];
+            }
+            if (task.archived === undefined) {
+                needsMigration = true;
+                task.archived = false;
+            }
             return task;
         });
 
@@ -94,6 +133,31 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('tags', JSON.stringify(tags));
     }
 
+    // ============ HELPERS ============
+
+    function formatTimestamp(ts) {
+        const d = new Date(ts);
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function formatDueDate(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function isOverdue(task) {
+        if (!task.dueDate || task.status === 'completed') return false;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return new Date(task.dueDate + 'T00:00:00') < today;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
     // ============ TASK CRUD ============
 
     function addTask() {
@@ -108,12 +172,20 @@ document.addEventListener('DOMContentLoaded', function() {
             description: description,
             completed: false,
             status: 'not-started',
-            tags: []
+            tags: [],
+            dueDate: null,
+            priority: 'medium',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            notes: [],
+            subtasks: [],
+            archived: false
         };
 
         tasks.push(task);
         saveTasks();
         renderBoard();
+        renderFilterTags();
 
         taskInput.value = '';
         if (taskDescription) taskDescription.value = '';
@@ -124,6 +196,7 @@ document.addEventListener('DOMContentLoaded', function() {
         tasks = tasks.filter(task => task.id !== id);
         saveTasks();
         renderBoard();
+        renderFilterTags();
     }
 
     function updateTaskStatus(taskId, newStatus) {
@@ -131,6 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (task.id === taskId) {
                 task.status = newStatus;
                 task.completed = (newStatus === 'completed');
+                task.updatedAt = Date.now();
             }
             return task;
         });
@@ -197,10 +271,25 @@ document.addEventListener('DOMContentLoaded', function() {
             if (col) col.innerHTML = '';
         });
 
-        // Filter tasks by selected tags (empty array = show all)
-        const filteredTasks = selectedFilterTags.length === 0
-            ? tasks
-            : tasks.filter(task => task.tags && selectedFilterTags.some(tagId => task.tags.includes(tagId)));
+        let filteredTasks = tasks.slice();
+
+        // Filter out archived tasks unless toggle is on
+        if (!showArchived) {
+            filteredTasks = filteredTasks.filter(task => !task.archived);
+        }
+
+        // Filter by selected tags
+        if (selectedFilterTags.length > 0) {
+            filteredTasks = filteredTasks.filter(task => task.tags && selectedFilterTags.some(tagId => task.tags.includes(tagId)));
+        }
+
+        // Filter by search query
+        if (searchQuery) {
+            filteredTasks = filteredTasks.filter(task =>
+                task.text.toLowerCase().includes(searchQuery) ||
+                (task.description && task.description.toLowerCase().includes(searchQuery))
+            );
+        }
 
         // Group tasks by status
         const tasksByStatus = {
@@ -216,8 +305,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
+        // Priority sort order
+        const priorityOrder = { high: 0, medium: 1, low: 2 };
+
         // Render tasks in each column
         Object.entries(tasksByStatus).forEach(([status, statusTasks]) => {
+            // Sort by priority within each column
+            statusTasks.sort((a, b) => (priorityOrder[a.priority] || 1) - (priorityOrder[b.priority] || 1));
+
             statusTasks.forEach(task => {
                 const card = createTaskCard(task);
                 if (columns[status]) {
@@ -241,6 +336,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function createTaskCard(task) {
         const card = document.createElement('div');
         card.className = 'task-card';
+        if (task.archived) card.classList.add('archived');
+        if (isOverdue(task)) card.classList.add('overdue');
         card.draggable = true;
         card.dataset.taskId = task.id;
 
@@ -256,7 +353,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     tagsHtml += `<span class="tag" style="background-color: ${tag.color}">${escapeHtml(tag.name)}</span>`;
                 }
             });
+            // Priority badge inline with tags (high only)
+            if (task.priority === 'high') {
+                tagsHtml += '<span class="task-priority high">HIGH</span>';
+            }
             tagsHtml += '</div>';
+        } else if (task.priority === 'high') {
+            tagsHtml = '<div class="task-tags"><span class="task-priority high">HIGH</span></div>';
         }
 
         // Apply left border color based on first tag
@@ -268,10 +371,28 @@ document.addEventListener('DOMContentLoaded', function() {
             ? `<p class="task-description">${escapeHtml(task.description)}</p>`
             : '';
 
+        // Build metadata row
+        let metaItems = [];
+        if (task.dueDate) {
+            const overdueClass = isOverdue(task) ? ' overdue' : '';
+            metaItems.push(`<span class="task-meta-item${overdueClass}">${formatDueDate(task.dueDate)}</span>`);
+        }
+        if (task.subtasks && task.subtasks.length > 0) {
+            const done = task.subtasks.filter(s => s.completed).length;
+            metaItems.push(`<span class="task-meta-item">${done}/${task.subtasks.length} subtasks</span>`);
+        }
+        if (task.notes && task.notes.length > 0) {
+            metaItems.push(`<span class="task-meta-item">${task.notes.length} note${task.notes.length !== 1 ? 's' : ''}</span>`);
+        }
+        const metaHtml = metaItems.length > 0
+            ? `<div class="task-card-meta">${metaItems.join('')}</div>`
+            : '';
+
         card.innerHTML = `
             ${tagsHtml}
             <span class="task-text">${escapeHtml(task.text)}</span>
             ${descriptionHtml}
+            ${metaHtml}
             <div class="task-actions">
                 <button class="edit-btn" title="Edit task">&#9998;</button>
                 <button class="delete-btn" title="Delete">&times;</button>
@@ -304,12 +425,14 @@ document.addEventListener('DOMContentLoaded', function() {
         tagList.innerHTML = '';
 
         tags.forEach(tag => {
+            const count = tasks.filter(t => t.tags && t.tags.includes(tag.id)).length;
             const li = document.createElement('li');
             li.className = 'tag-list-item';
             li.innerHTML = `
                 <div class="tag-preview">
                     <span class="tag-color-swatch" style="background-color: ${tag.color}"></span>
                     <span>${escapeHtml(tag.name)}</span>
+                    <span class="tag-task-count">${count} task${count !== 1 ? 's' : ''}</span>
                 </div>
                 <button class="delete-tag-btn" data-tag-id="${tag.id}">&times;</button>
             `;
@@ -346,12 +469,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add option for each tag
         tags.forEach(tag => {
             const isSelected = selectedFilterTags.includes(tag.id);
+            const count = tasks.filter(t => t.tags && t.tags.includes(tag.id)).length;
             const option = document.createElement('label');
             option.className = 'filter-option' + (isSelected ? ' selected' : '');
             option.innerHTML = `
                 <input type="checkbox" value="${tag.id}" ${isSelected ? 'checked' : ''}>
                 <span class="filter-option-color" style="background-color: ${tag.color}"></span>
                 <span class="filter-option-label">${escapeHtml(tag.name)}</span>
+                <span class="tag-count">(${count})</span>
             `;
             option.querySelector('input').addEventListener('change', (e) => {
                 toggleFilterTag(tag.id, e.target.checked);
@@ -412,23 +537,59 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function updateStats() {
-        const total = tasks.length;
-        const completed = tasks.filter(t => t.status === 'completed').length;
-        const atRisk = tasks.filter(t => t.status === 'at-risk').length;
+        const nonArchived = tasks.filter(t => !t.archived);
+        const total = nonArchived.length;
+        const completed = nonArchived.filter(t => t.status === 'completed').length;
+        const atRisk = nonArchived.filter(t => t.status === 'at-risk').length;
+        const archived = tasks.filter(t => t.archived).length;
 
         let statsText = `${total} total tasks`;
         if (completed > 0) statsText += ` | ${completed} completed`;
         if (atRisk > 0) statsText += ` | ${atRisk} waiting`;
+        if (archived > 0) statsText += ` | ${archived} archived`;
 
         if (taskCount) {
             taskCount.textContent = statsText;
         }
     }
 
-    function escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+    // ============ ARCHIVE ============
+
+    function archiveCompletedTasks() {
+        let changed = false;
+        tasks = tasks.map(task => {
+            if (task.status === 'completed' && !task.archived) {
+                task.archived = true;
+                task.updatedAt = Date.now();
+                changed = true;
+            }
+            return task;
+        });
+        if (changed) {
+            saveTasks();
+            renderBoard();
+        }
+    }
+
+    // ============ SUBTASK HELPERS ============
+
+    function renderEditSubtasks() {
+        const list = document.getElementById('editSubtaskList');
+        if (!list) return;
+        list.innerHTML = '';
+        editingSubtasks.forEach(sub => {
+            const li = document.createElement('li');
+            li.className = 'edit-subtask-item';
+            li.innerHTML = `
+                <span>${escapeHtml(sub.text)}</span>
+                <button class="delete-subtask-btn" data-sub-id="${sub.id}">&times;</button>
+            `;
+            li.querySelector('.delete-subtask-btn').addEventListener('click', () => {
+                editingSubtasks = editingSubtasks.filter(s => s.id !== sub.id);
+                renderEditSubtasks();
+            });
+            list.appendChild(li);
+        });
     }
 
     // ============ DRAG AND DROP ============
@@ -563,6 +724,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 openTaskEditModal(currentEditingTaskId);
             });
         }
+
+        // Search input
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                searchQuery = e.target.value.trim().toLowerCase();
+                renderBoard();
+            });
+        }
+
+        // Archive completed button
+        const archiveCompletedBtn = document.getElementById('archiveCompletedBtn');
+        if (archiveCompletedBtn) {
+            archiveCompletedBtn.addEventListener('click', archiveCompletedTasks);
+        }
+
+        // Show archived toggle
+        const showArchivedToggle = document.getElementById('showArchivedToggle');
+        if (showArchivedToggle) {
+            showArchivedToggle.addEventListener('change', (e) => {
+                showArchived = e.target.checked;
+                renderBoard();
+            });
+        }
     }
 
     // ============ MODAL MANAGEMENT ============
@@ -610,6 +795,140 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Populate priority badge
+        const viewPriority = document.getElementById('viewTaskPriority');
+        if (viewPriority) {
+            viewPriority.className = 'view-task-priority ' + (task.priority || 'medium');
+            viewPriority.textContent = (task.priority || 'medium').charAt(0).toUpperCase() + (task.priority || 'medium').slice(1) + ' Priority';
+        }
+
+        // Populate due date
+        const viewDueDate = document.getElementById('viewTaskDueDate');
+        if (viewDueDate) {
+            if (task.dueDate) {
+                viewDueDate.textContent = 'Due: ' + formatDueDate(task.dueDate);
+                viewDueDate.className = 'view-task-due-date' + (isOverdue(task) ? ' overdue' : '');
+                viewDueDate.style.display = 'inline-block';
+            } else {
+                viewDueDate.style.display = 'none';
+            }
+        }
+
+        // Populate subtasks
+        const viewSubtasks = document.getElementById('viewSubtasks');
+        if (viewSubtasks) {
+            viewSubtasks.innerHTML = '';
+            if (task.subtasks && task.subtasks.length > 0) {
+                const heading = document.createElement('h4');
+                heading.textContent = `Subtasks (${task.subtasks.filter(s => s.completed).length}/${task.subtasks.length})`;
+                viewSubtasks.appendChild(heading);
+
+                task.subtasks.forEach(sub => {
+                    const item = document.createElement('label');
+                    item.className = 'subtask-item' + (sub.completed ? ' completed' : '');
+                    item.innerHTML = `
+                        <input type="checkbox" ${sub.completed ? 'checked' : ''}>
+                        <span>${escapeHtml(sub.text)}</span>
+                    `;
+                    item.querySelector('input').addEventListener('change', (e) => {
+                        e.stopPropagation();
+                        sub.completed = e.target.checked;
+                        task.updatedAt = Date.now();
+                        saveTasks();
+                        heading.textContent = `Subtasks (${task.subtasks.filter(s => s.completed).length}/${task.subtasks.length})`;
+                        item.classList.toggle('completed', sub.completed);
+                        renderBoard();
+                    });
+                    viewSubtasks.appendChild(item);
+                });
+            }
+        }
+
+        // Populate notes
+        const viewNotes = document.getElementById('viewNotes');
+        if (viewNotes) {
+            viewNotes.innerHTML = '';
+            if (task.notes && task.notes.length > 0) {
+                const heading = document.createElement('h4');
+                heading.textContent = `Notes (${task.notes.length})`;
+                viewNotes.appendChild(heading);
+
+                [...task.notes].reverse().forEach(note => {
+                    const noteEl = document.createElement('div');
+                    noteEl.className = 'note-item';
+                    noteEl.innerHTML = `
+                        <p class="note-text">${escapeHtml(note.text)}</p>
+                        <span class="note-date">${formatTimestamp(note.createdAt)}</span>
+                        <button class="delete-note-btn" data-note-id="${note.id}">&times;</button>
+                    `;
+                    noteEl.querySelector('.delete-note-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        task.notes = task.notes.filter(n => n.id !== note.id);
+                        task.updatedAt = Date.now();
+                        saveTasks();
+                        openTaskViewModal(task.id);
+                        renderBoard();
+                    });
+                    viewNotes.appendChild(noteEl);
+                });
+            }
+        }
+
+        // Wire add note button
+        const newNoteInput = document.getElementById('newNoteInput');
+        const addNoteBtn = document.getElementById('addNoteBtn');
+        if (addNoteBtn && newNoteInput) {
+            newNoteInput.value = '';
+            addNoteBtn.onclick = () => {
+                const text = newNoteInput.value.trim();
+                if (!text) return;
+                if (!task.notes) task.notes = [];
+                task.notes.push({ id: Date.now(), text, createdAt: Date.now() });
+                task.updatedAt = Date.now();
+                saveTasks();
+                newNoteInput.value = '';
+                openTaskViewModal(task.id);
+                renderBoard();
+            };
+        }
+
+        // Populate timestamps
+        const viewMeta = document.getElementById('viewTaskMeta');
+        if (viewMeta) {
+            viewMeta.innerHTML = `
+                <span>Created: ${formatTimestamp(task.createdAt)}</span>
+                <span>Last updated: ${formatTimestamp(task.updatedAt)}</span>
+            `;
+        }
+
+        // Archive / Unarchive button
+        const archiveBtn = document.getElementById('viewArchiveBtn');
+        if (archiveBtn) {
+            if (task.archived) {
+                archiveBtn.textContent = 'Unarchive';
+                archiveBtn.style.display = 'inline-block';
+                archiveBtn.onclick = () => {
+                    task.archived = false;
+                    task.updatedAt = Date.now();
+                    saveTasks();
+                    renderBoard();
+                    closeAllModals();
+                };
+            } else if (task.status === 'completed') {
+                archiveBtn.textContent = 'Archive';
+                archiveBtn.style.display = 'inline-block';
+                archiveBtn.onclick = () => {
+                    task.archived = true;
+                    task.updatedAt = Date.now();
+                    saveTasks();
+                    renderBoard();
+                    closeAllModals();
+                };
+            } else {
+                archiveBtn.style.display = 'none';
+            }
+        }
+
         if (taskViewModal) {
             taskViewModal.classList.remove('hidden');
         }
@@ -629,6 +948,42 @@ document.addEventListener('DOMContentLoaded', function() {
         const editDescription = document.getElementById('editTaskDescription');
         if (editDescription) {
             editDescription.value = task.description || '';
+        }
+
+        // Populate due date
+        const editDueDate = document.getElementById('editDueDate');
+        if (editDueDate) {
+            editDueDate.value = task.dueDate || '';
+        }
+
+        // Populate priority
+        const priorityRadios = document.querySelectorAll('input[name="priority"]');
+        priorityRadios.forEach(radio => {
+            radio.checked = (radio.value === (task.priority || 'medium'));
+        });
+
+        // Populate subtasks
+        editingSubtasks = JSON.parse(JSON.stringify(task.subtasks || []));
+        renderEditSubtasks();
+
+        // Wire subtask add button
+        const subtaskInput = document.getElementById('subtaskInput');
+        const addSubtaskBtn = document.getElementById('addSubtaskBtn');
+        if (addSubtaskBtn && subtaskInput) {
+            subtaskInput.value = '';
+            addSubtaskBtn.onclick = () => {
+                const text = subtaskInput.value.trim();
+                if (!text) return;
+                editingSubtasks.push({ id: Date.now(), text, completed: false });
+                subtaskInput.value = '';
+                renderEditSubtasks();
+            };
+            subtaskInput.onkeypress = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addSubtaskBtn.click();
+                }
+            };
         }
 
         // Render tag checkboxes
@@ -667,16 +1022,27 @@ document.addEventListener('DOMContentLoaded', function() {
         const editDescription = document.getElementById('editTaskDescription');
         const newDescription = editDescription ? editDescription.value.trim() : '';
 
-        // Update task with tags and description
+        const editDueDate = document.getElementById('editDueDate');
+        const newDueDate = editDueDate && editDueDate.value ? editDueDate.value : null;
+
+        const selectedPriority = document.querySelector('input[name="priority"]:checked');
+        const newPriority = selectedPriority ? selectedPriority.value : 'medium';
+
+        // Update task
         tasks = tasks.map(task => {
             if (task.id === currentEditingTaskId) {
                 task.tags = selectedTagIds;
                 task.description = newDescription;
+                task.dueDate = newDueDate;
+                task.priority = newPriority;
+                task.subtasks = editingSubtasks;
+                task.updatedAt = Date.now();
             }
             return task;
         });
         saveTasks();
         renderBoard();
+        renderFilterTags();
 
         closeAllModals();
     }
