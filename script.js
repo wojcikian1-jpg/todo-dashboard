@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let searchQuery = '';
     let showArchived = false;
     let editingSubtasks = [];
+    let db = null;
 
     // ============ DOM REFERENCES ============
     const taskInput = document.getElementById('taskInput');
@@ -64,8 +65,58 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============ DATA MANAGEMENT ============
 
     function loadData() {
+        // Load from localStorage as instant cache
         tasks = JSON.parse(localStorage.getItem('tasks')) || [];
         tags = JSON.parse(localStorage.getItem('tags')) || [];
+
+        // Set up Firebase real-time sync if available
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            db = firebase.database();
+
+            db.ref('tasks').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data === null && tasks.length > 0) {
+                    // First time setup: push existing local data to Firebase
+                    db.ref('tasks').set(tasks);
+                    return;
+                }
+                tasks = normalizeTasks(data || []);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                renderFilterTags();
+                renderBoard();
+            });
+
+            db.ref('tags').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data === null && tags.length > 0) {
+                    // First time setup: push existing local tags to Firebase
+                    db.ref('tags').set(tags);
+                    return;
+                }
+                tags = data || [];
+                localStorage.setItem('tags', JSON.stringify(tags));
+                renderFilterTags();
+                renderBoard();
+            });
+        }
+    }
+
+    function normalizeTasks(taskArray) {
+        return taskArray.map(task => ({
+            id: task.id,
+            text: task.text || '',
+            description: task.description || '',
+            completed: task.completed || false,
+            status: task.status || 'not-started',
+            tags: task.tags || [],
+            dueDate: task.dueDate || null,
+            priority: task.priority || 'medium',
+            createdAt: task.createdAt || task.id,
+            updatedAt: task.updatedAt || task.id,
+            notes: task.notes || [],
+            subtasks: task.subtasks || [],
+            archived: task.archived || false
+        }));
     }
 
     function migrateData() {
@@ -127,10 +178,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function saveTasks() {
         localStorage.setItem('tasks', JSON.stringify(tasks));
+        if (db) {
+            db.ref('tasks').set(tasks);
+        }
     }
 
     function saveTags() {
         localStorage.setItem('tags', JSON.stringify(tags));
+        if (db) {
+            db.ref('tags').set(tags);
+        }
     }
 
     // ============ HELPERS ============
