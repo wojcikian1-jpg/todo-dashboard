@@ -14,6 +14,8 @@ export const createTaskSchema = z.object({
   description: z.string().trim().max(2000).optional().default(""),
 });
 
+export const subtaskStatusSchema = z.enum(["pending", "in-progress", "completed"]);
+
 export const updateTaskSchema = z.object({
   id: z.string().uuid(),
   description: z.string().trim().max(2000),
@@ -24,7 +26,7 @@ export const updateTaskSchema = z.object({
     z.object({
       id: z.string(),
       text: z.string().trim().min(1).max(500),
-      completed: z.boolean(),
+      status: subtaskStatusSchema,
     })
   ),
   notes: z.array(

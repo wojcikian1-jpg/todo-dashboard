@@ -38,7 +38,7 @@ export function TaskCard({
 
   const firstTagColor = task.tags[0]?.color;
   const overdue = isOverdue(task);
-  const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
+  const completedSubtasks = task.subtasks.filter((s) => s.status === "completed").length;
 
   return (
     <div

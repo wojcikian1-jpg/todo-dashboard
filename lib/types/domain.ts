@@ -15,10 +15,18 @@ export const TASK_PRIORITY = {
 
 export type TaskPriority = (typeof TASK_PRIORITY)[keyof typeof TASK_PRIORITY];
 
+export const SUBTASK_STATUS = {
+  PENDING: "pending",
+  IN_PROGRESS: "in-progress",
+  COMPLETED: "completed",
+} as const;
+
+export type SubtaskStatus = (typeof SUBTASK_STATUS)[keyof typeof SUBTASK_STATUS];
+
 export interface Subtask {
   readonly id: string;
   readonly text: string;
-  readonly completed: boolean;
+  readonly status: SubtaskStatus;
 }
 
 export interface Note {

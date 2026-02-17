@@ -41,7 +41,11 @@ export async function getTasks(): Promise<Task[]> {
     tags: (row.tag_ids ?? [])
       .map((id: string) => tagMap.get(id))
       .filter((t: Tag | undefined): t is Tag => t !== undefined),
-    subtasks: row.subtasks ?? [],
+    subtasks: (row.subtasks ?? []).map((s: Record<string, unknown>) => ({
+      id: s.id,
+      text: s.text,
+      status: s.status ?? (s.completed ? "completed" : "pending"),
+    })),
     notes: row.notes ?? [],
     archived: row.archived,
     createdAt: row.created_at,

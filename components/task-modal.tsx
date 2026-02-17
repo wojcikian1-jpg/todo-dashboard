@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateTask } from "@/lib/actions";
-import type { Task, Tag, TaskPriority } from "@/lib/types/domain";
+import type { Task, Tag, TaskPriority, SubtaskStatus } from "@/lib/types/domain";
 
 interface Props {
   task: Task;
@@ -78,7 +78,7 @@ export function TaskModal({ task, tags, onClose }: Props) {
       subtasks: task.subtasks.map((s) => ({
         id: s.id,
         text: s.text,
-        completed: s.completed,
+        status: s.status,
       })),
       notes: task.notes.map((n) => ({
         id: n.id,
@@ -90,9 +90,15 @@ export function TaskModal({ task, tags, onClose }: Props) {
   }
 
   // View mode actions
-  function handleToggleSubtask(subtaskId: string) {
+  function cycleSubtaskStatus(current: SubtaskStatus): SubtaskStatus {
+    if (current === "pending") return "in-progress";
+    if (current === "in-progress") return "completed";
+    return "pending";
+  }
+
+  function handleCycleSubtask(subtaskId: string) {
     const updated = task.subtasks.map((s) =>
-      s.id === subtaskId ? { ...s, completed: !s.completed } : s
+      s.id === subtaskId ? { ...s, status: cycleSubtaskStatus(s.status) } : s
     );
     startTransition(async () => {
       await updateTask(buildPayload({ subtasks: updated }));
@@ -126,7 +132,7 @@ export function TaskModal({ task, tags, onClose }: Props) {
     if (!text) return;
     setEditSubtasks([
       ...editSubtasks,
-      { id: crypto.randomUUID(), text, completed: false },
+      { id: crypto.randomUUID(), text, status: "pending" as const },
     ]);
     setNewSubtaskText("");
   }
@@ -152,7 +158,7 @@ export function TaskModal({ task, tags, onClose }: Props) {
         subtasks: editSubtasks.map((s) => ({
           id: s.id,
           text: s.text,
-          completed: s.completed,
+          status: s.status,
         })),
         notes: task.notes.map((n) => ({
           id: n.id,
@@ -165,7 +171,8 @@ export function TaskModal({ task, tags, onClose }: Props) {
   }
 
   const overdue = isOverdue(task);
-  const completedSubtasks = task.subtasks.filter((s) => s.completed).length;
+  const completedSubtasks = task.subtasks.filter((s) => s.status === "completed").length;
+  const inProgressSubtasks = task.subtasks.filter((s) => s.status === "in-progress").length;
 
   return (
     <div
@@ -251,27 +258,38 @@ export function TaskModal({ task, tags, onClose }: Props) {
             {task.subtasks.length > 0 && (
               <div>
                 <h4 className="mb-2 text-sm font-semibold text-slate-700">
-                  Subtasks ({completedSubtasks}/{task.subtasks.length})
+                  Subtasks ({completedSubtasks}/{task.subtasks.length}
+                  {inProgressSubtasks > 0 && `, ${inProgressSubtasks} in progress`})
                 </h4>
                 <div className="space-y-1">
                   {task.subtasks.map((sub) => (
-                    <label
+                    <button
                       key={sub.id}
-                      className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50 ${
-                        sub.completed
+                      type="button"
+                      onClick={() => handleCycleSubtask(sub.id)}
+                      disabled={isPending}
+                      className={`flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-slate-50 ${
+                        sub.status === "completed"
                           ? "text-slate-400 line-through"
-                          : "text-slate-700"
+                          : sub.status === "in-progress"
+                            ? "text-blue-700"
+                            : "text-slate-700"
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        checked={sub.completed}
-                        onChange={() => handleToggleSubtask(sub.id)}
-                        disabled={isPending}
-                        className="accent-blue-600"
-                      />
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border text-[10px] ${
+                          sub.status === "completed"
+                            ? "border-green-500 bg-green-500 text-white"
+                            : sub.status === "in-progress"
+                              ? "border-blue-500 bg-blue-50 text-blue-500"
+                              : "border-slate-300"
+                        }`}
+                      >
+                        {sub.status === "completed" && "\u2713"}
+                        {sub.status === "in-progress" && "\u25BA"}
+                      </span>
                       {sub.text}
-                    </label>
+                    </button>
                   ))}
                 </div>
               </div>
