@@ -3,6 +3,9 @@
 -- 3 new tables, alter 2 existing tables, new RLS policies
 -- ============================================================
 
+-- Enable pgcrypto for gen_random_bytes (used in invite token generation)
+create extension if not exists pgcrypto with schema extensions;
+
 -- Workspaces table
 create table public.workspaces (
   id uuid default gen_random_uuid() primary key,
@@ -32,7 +35,7 @@ alter table public.workspace_members enable row level security;
 create table public.workspace_invites (
   id uuid default gen_random_uuid() primary key,
   workspace_id uuid references public.workspaces(id) on delete cascade not null,
-  token text unique not null default encode(gen_random_bytes(24), 'hex'),
+  token text unique not null default encode(extensions.gen_random_bytes(24), 'hex'),
   created_by uuid references auth.users(id) on delete set null,
   expires_at timestamptz default (now() + interval '7 days') not null,
   created_at timestamptz default now() not null
