@@ -58,6 +58,19 @@ export const toggleSubtaskSchema = z.object({
   subtaskId: z.string(),
 });
 
+export const createWorkspaceSchema = z.object({
+  name: z.string().trim().min(1, "Workspace name is required").max(100),
+});
+
+export const generateInviteSchema = z.object({
+  workspaceId: z.string().uuid(),
+});
+
+export const joinWorkspaceSchema = z.object({
+  token: z.string().min(1, "Invite token is required"),
+});
+
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type CreateTagInput = z.infer<typeof createTagSchema>;
+export type CreateWorkspaceInput = z.infer<typeof createWorkspaceSchema>;

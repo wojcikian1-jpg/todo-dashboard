@@ -8,6 +8,7 @@ import {
   updateTaskStatusSchema,
   createTagSchema,
 } from "@/lib/schemas";
+import { getActiveWorkspaceId } from "@/lib/workspace";
 import type { ActionResult } from "@/lib/types/domain";
 
 async function getAuthUserId(): Promise<string> {
@@ -27,9 +28,11 @@ export async function createTask(input: unknown): Promise<ActionResult> {
 
   try {
     const userId = await getAuthUserId();
+    const workspaceId = await getActiveWorkspaceId();
     const supabase = await createClient();
     const { error } = await supabase.from("tasks").insert({
       user_id: userId,
+      workspace_id: workspaceId,
       text: parsed.data.text,
       description: parsed.data.description,
     });
@@ -117,10 +120,12 @@ export async function deleteTask(id: unknown): Promise<ActionResult> {
 export async function archiveCompletedTasks(): Promise<ActionResult> {
   try {
     await getAuthUserId();
+    const workspaceId = await getActiveWorkspaceId();
     const supabase = await createClient();
     const { error } = await supabase
       .from("tasks")
       .update({ archived: true })
+      .eq("workspace_id", workspaceId)
       .eq("status", "completed")
       .eq("archived", false);
 
@@ -140,9 +145,11 @@ export async function createTag(input: unknown): Promise<ActionResult> {
 
   try {
     const userId = await getAuthUserId();
+    const workspaceId = await getActiveWorkspaceId();
     const supabase = await createClient();
     const { error } = await supabase.from("tags").insert({
       user_id: userId,
+      workspace_id: workspaceId,
       name: parsed.data.name,
       color: parsed.data.color,
     });

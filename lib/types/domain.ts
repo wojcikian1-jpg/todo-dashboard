@@ -56,6 +56,28 @@ export interface Task {
   readonly updatedAt: string;
 }
 
+export const WORKSPACE_ROLE = {
+  OWNER: "owner",
+  MEMBER: "member",
+} as const;
+
+export type WorkspaceRole = (typeof WORKSPACE_ROLE)[keyof typeof WORKSPACE_ROLE];
+
+export interface Workspace {
+  readonly id: string;
+  readonly name: string;
+  readonly ownerId: string;
+  readonly role: WorkspaceRole;
+  readonly createdAt: string;
+}
+
+export interface WorkspaceInvite {
+  readonly id: string;
+  readonly token: string;
+  readonly expiresAt: string;
+  readonly createdAt: string;
+}
+
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
