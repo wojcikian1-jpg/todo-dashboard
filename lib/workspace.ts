@@ -29,11 +29,30 @@ export async function getActiveWorkspaceId(): Promise<string> {
     .limit(1)
     .single();
 
-  if (error || !data) throw new Error("No workspace found");
+  if (data) {
+    await setActiveWorkspaceId(data.workspace_id);
+    return data.workspace_id;
+  }
 
-  // Persist this for next time
-  await setActiveWorkspaceId(data.workspace_id);
-  return data.workspace_id;
+  // No workspace exists yet — create one for this user
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: ws, error: wsError } = await supabase
+    .from("workspaces")
+    .insert({ name: "Personal", owner_id: user.id })
+    .select("id")
+    .single();
+  if (wsError || !ws) throw new Error("Failed to create workspace");
+
+  await supabase
+    .from("workspace_members")
+    .insert({ workspace_id: ws.id, user_id: user.id, role: "owner" });
+
+  await setActiveWorkspaceId(ws.id);
+  return ws.id;
 }
 
 export async function setActiveWorkspaceId(
