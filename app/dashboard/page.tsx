@@ -1,21 +1,8 @@
-import { getTasks, getTags, getWorkspaces } from "@/lib/queries";
-import { getActiveWorkspaceId } from "@/lib/workspace";
+import { getTasks, getTags } from "@/lib/queries";
 import { KanbanBoard } from "@/components/kanban-board";
 
 export default async function DashboardPage() {
-  const [tasks, tags, workspaces, activeWorkspaceId] = await Promise.all([
-    getTasks(),
-    getTags(),
-    getWorkspaces(),
-    getActiveWorkspaceId(),
-  ]);
+  const [tasks, tags] = await Promise.all([getTasks(), getTags()]);
 
-  return (
-    <KanbanBoard
-      initialTasks={tasks}
-      initialTags={tags}
-      workspaces={workspaces}
-      activeWorkspaceId={activeWorkspaceId}
-    />
-  );
+  return <KanbanBoard initialTasks={tasks} initialTags={tags} />;
 }

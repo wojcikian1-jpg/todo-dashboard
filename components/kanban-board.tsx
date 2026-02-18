@@ -19,14 +19,12 @@ import {
   deleteTask,
   archiveCompletedTasks,
 } from "@/lib/actions";
-import type { Task, Tag, TaskStatus, Workspace } from "@/lib/types/domain";
+import type { Task, Tag, TaskStatus } from "@/lib/types/domain";
 import { TASK_STATUS } from "@/lib/types/domain";
 import { TaskCard } from "./task-card";
 import { TaskModal } from "./task-modal";
 import { TagManagerModal } from "./tag-manager-modal";
 import { FilterBar } from "./filter-bar";
-import { WorkspaceSwitcher } from "./workspace-switcher";
-import { InviteModal } from "./invite-modal";
 
 const COLUMNS = [
   { id: TASK_STATUS.NOT_STARTED, title: "Not Started" },
@@ -40,16 +38,9 @@ const PRIORITY_ORDER: Record<string, number> = { high: 0, medium: 1, low: 2 };
 interface Props {
   initialTasks: Task[];
   initialTags: Tag[];
-  workspaces: Workspace[];
-  activeWorkspaceId: string;
 }
 
-export function KanbanBoard({
-  initialTasks,
-  initialTags,
-  workspaces,
-  activeWorkspaceId,
-}: Props) {
+export function KanbanBoard({ initialTasks, initialTags }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -64,7 +55,6 @@ export function KanbanBoard({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTagManager, setShowTagManager] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -173,25 +163,7 @@ export function KanbanBoard({
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-white">
-              {workspaces.find((w) => w.id === activeWorkspaceId)?.name ??
-                "Dashboard"}
-            </h1>
-            <WorkspaceSwitcher
-              workspaces={workspaces}
-              activeWorkspaceId={activeWorkspaceId}
-            />
-            {workspaces.find((w) => w.id === activeWorkspaceId)?.role ===
-              "owner" && (
-              <button
-                onClick={() => setShowInvite(true)}
-                className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600"
-              >
-                Invite
-              </button>
-            )}
-          </div>
+          <h1 className="text-2xl font-bold text-white">Team Dashboard</h1>
           <button
             onClick={handleLogout}
             className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600"
@@ -316,12 +288,6 @@ export function KanbanBoard({
         />
       )}
 
-      {showInvite && (
-        <InviteModal
-          workspaceId={activeWorkspaceId}
-          onClose={() => setShowInvite(false)}
-        />
-      )}
     </div>
   );
 }
