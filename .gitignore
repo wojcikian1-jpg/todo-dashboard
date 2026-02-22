@@ -6,5 +6,6 @@ node_modules
 next-env.d.ts
 supabase/.temp/
 supabase/.branches/
-.claude/
+.claude/*
+!.claude/skills/
 .vercel
