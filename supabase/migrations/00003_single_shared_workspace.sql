@@ -4,10 +4,14 @@
 
 -- 1. Create the shared workspace (if not already present)
 -- Use the first existing user as owner (auth.uid() is null in migration context)
+-- Skip if no users exist yet (the trigger below will create it on first signup)
 insert into public.workspaces (name, owner_id)
 select 'Team Dashboard', (select id from auth.users order by created_at limit 1)
 where not exists (
   select 1 from public.workspaces where name = 'Team Dashboard'
+)
+and exists (
+  select 1 from auth.users
 );
 
 -- 2. Move all existing users into the shared workspace
