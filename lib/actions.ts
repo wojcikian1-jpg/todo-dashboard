@@ -9,7 +9,7 @@ import {
   createTagSchema,
 } from "@/lib/schemas";
 import { getActiveWorkspaceId } from "@/lib/workspace";
-import type { ActionResult } from "@/lib/types/domain";
+import type { ActionResult, Task } from "@/lib/types/domain";
 
 async function getAuthUserId(): Promise<string> {
   const supabase = await createClient();
@@ -134,6 +134,38 @@ export async function archiveCompletedTasks(): Promise<ActionResult> {
     return { success: true, data: undefined };
   } catch {
     return { success: false, error: "Failed to archive tasks" };
+  }
+}
+
+export async function fetchArchivedTasks(): Promise<ActionResult<Task[]>> {
+  try {
+    await getAuthUserId();
+    const { getArchivedTasks } = await import("@/lib/queries");
+    const tasks = await getArchivedTasks();
+    return { success: true, data: tasks };
+  } catch {
+    return { success: false, error: "Failed to fetch archived tasks" };
+  }
+}
+
+export async function restoreTask(id: unknown): Promise<ActionResult> {
+  if (typeof id !== "string") {
+    return { success: false, error: "Invalid task ID" };
+  }
+
+  try {
+    await getAuthUserId();
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("tasks")
+      .update({ archived: false })
+      .eq("id", id);
+
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to restore task" };
   }
 }
 

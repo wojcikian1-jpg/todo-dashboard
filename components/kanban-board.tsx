@@ -25,6 +25,7 @@ import { TaskCard } from "./task-card";
 import { TaskModal } from "./task-modal";
 import { TagManagerModal } from "./tag-manager-modal";
 import { FilterBar } from "./filter-bar";
+import { ArchivedTasksModal } from "./archived-tasks-modal";
 
 const COLUMNS = [
   { id: TASK_STATUS.NOT_STARTED, title: "Not Started" },
@@ -55,6 +56,7 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTagManager, setShowTagManager] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -261,13 +263,21 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
             {totalTasks} total tasks
             {completedCount > 0 && ` | ${completedCount} completed`}
           </span>
-          <button
-            onClick={handleArchiveCompleted}
-            disabled={isPending || completedCount === 0}
-            className="rounded bg-slate-700 px-3 py-1 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
-          >
-            Archive Completed
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowArchive(true)}
+              className="rounded bg-slate-700 px-3 py-1 text-slate-300 hover:bg-slate-600"
+            >
+              View Archive
+            </button>
+            <button
+              onClick={handleArchiveCompleted}
+              disabled={isPending || completedCount === 0}
+              className="rounded bg-slate-700 px-3 py-1 text-slate-300 hover:bg-slate-600 disabled:opacity-50"
+            >
+              Archive Completed
+            </button>
+          </div>
         </div>
       </div>
 
@@ -288,6 +298,9 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
         />
       )}
 
+      {showArchive && (
+        <ArchivedTasksModal onClose={() => setShowArchive(false)} />
+      )}
     </div>
   );
 }
