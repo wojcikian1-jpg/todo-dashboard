@@ -11,13 +11,12 @@ import {
 import { getActiveWorkspaceId } from "@/lib/workspace";
 import type { ActionResult, Task } from "@/lib/types/domain";
 
-async function getAuthUserId(): Promise<string> {
+async function getAuthUserId(): Promise<string | null> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  return user.id;
+  return user?.id ?? null;
 }
 
 export async function createTask(input: unknown): Promise<ActionResult> {

@@ -11,10 +11,7 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
-  createTask,
   updateTaskStatus as updateTaskStatusAction,
   deleteTask,
   archiveCompletedTasks,
@@ -43,7 +40,6 @@ interface Props {
 }
 
 export function KanbanBoard({ initialTasks, initialTags }: Props) {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const [optimisticTasks, addOptimistic] = useOptimistic(
@@ -134,13 +130,6 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
     });
   }
 
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
-
   const totalTasks = optimisticTasks.length;
   const completedCount = optimisticTasks.filter(
     (t) => t.status === "completed"
@@ -150,14 +139,8 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
     <div className="min-h-screen p-4 md:p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-white">Team Dashboard</h1>
-          <button
-            onClick={handleLogout}
-            className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm text-slate-300 hover:bg-slate-600"
-          >
-            Sign Out
-          </button>
         </div>
 
         {/* Top Actions */}

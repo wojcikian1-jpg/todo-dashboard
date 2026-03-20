@@ -21,18 +21,21 @@ export async function getActiveWorkspaceId(): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+
+  const ownerId = user?.id ?? "00000000-0000-0000-0000-000000000000";
 
   const { data: ws, error: wsError } = await supabase
     .from("workspaces")
-    .insert({ name: SHARED_WORKSPACE_NAME, owner_id: user.id })
+    .insert({ name: SHARED_WORKSPACE_NAME, owner_id: ownerId })
     .select("id")
     .single();
   if (wsError || !ws) throw new Error("Failed to create workspace");
 
-  await supabase
-    .from("workspace_members")
-    .insert({ workspace_id: ws.id, user_id: user.id, role: "owner" });
+  if (user) {
+    await supabase
+      .from("workspace_members")
+      .insert({ workspace_id: ws.id, user_id: user.id, role: "owner" });
+  }
 
   return ws.id;
 }
