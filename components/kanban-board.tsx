@@ -82,11 +82,14 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
   function getColumnTasks(status: TaskStatus) {
     return filteredTasks
       .filter((t) => t.status === status)
-      .sort(
-        (a, b) =>
-          (PRIORITY_ORDER[a.priority] ?? 1) -
-          (PRIORITY_ORDER[b.priority] ?? 1)
-      );
+      .sort((a, b) => {
+        // Primary: earliest due date first (tasks without due dates go last)
+        const aDate = a.dueDate ? new Date(a.dueDate + "T00:00:00").getTime() : Infinity;
+        const bDate = b.dueDate ? new Date(b.dueDate + "T00:00:00").getTime() : Infinity;
+        if (aDate !== bDate) return aDate - bDate;
+        // Secondary: highest priority first
+        return (PRIORITY_ORDER[a.priority] ?? 1) - (PRIORITY_ORDER[b.priority] ?? 1);
+      });
   }
 
   const activeTask = activeId

@@ -57,24 +57,28 @@ export function TaskCard({
       }
     >
       {/* Tags + Priority */}
-      {(task.tags.length > 0 || task.priority === "high") && (
-        <div className="mb-1.5 flex flex-wrap gap-1">
-          {task.tags.map((tag) => (
-            <span
-              key={tag.id}
-              className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
-              style={{ backgroundColor: tag.color }}
-            >
-              {tag.name}
-            </span>
-          ))}
-          {task.priority === "high" && (
-            <span className="rounded bg-red-500/20 px-1.5 py-0.5 text-[10px] font-bold text-red-400">
-              HIGH
-            </span>
-          )}
-        </div>
-      )}
+      <div className="mb-1.5 flex flex-wrap gap-1">
+        {task.tags.map((tag) => (
+          <span
+            key={tag.id}
+            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+            style={{ backgroundColor: tag.color }}
+          >
+            {tag.name}
+          </span>
+        ))}
+        <span
+          className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+            task.priority === "high"
+              ? "bg-red-500/20 text-red-400"
+              : task.priority === "medium"
+                ? "bg-yellow-500/20 text-yellow-400"
+                : "bg-green-500/20 text-green-400"
+          }`}
+        >
+          {task.priority.toUpperCase()}
+        </span>
+      </div>
 
       {/* Title */}
       <p className="text-sm font-medium text-white">{task.text}</p>
