@@ -26,6 +26,7 @@ import { TaskModal } from "./task-modal";
 import { TagManagerModal } from "./tag-manager-modal";
 import { FilterBar } from "./filter-bar";
 import { ArchivedTasksModal } from "./archived-tasks-modal";
+import { AddTaskModal } from "./add-task-modal";
 
 const COLUMNS = [
   { id: TASK_STATUS.NOT_STARTED, title: "Not Started" },
@@ -57,8 +58,7 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showTagManager, setShowTagManager] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
-  const [newDescription, setNewDescription] = useState("");
+  const [showAddTask, setShowAddTask] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedFilterTags, setSelectedFilterTags] = useState<string[]>([]);
 
@@ -121,20 +121,6 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
     });
   }
 
-  async function handleAddTask(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-
-    startTransition(async () => {
-      await createTask({
-        text: newTitle.trim(),
-        description: newDescription.trim(),
-      });
-      setNewTitle("");
-      setNewDescription("");
-    });
-  }
-
   async function handleDeleteTask(id: string) {
     if (selectedTaskId === id) setSelectedTaskId(null);
     startTransition(async () => {
@@ -174,28 +160,13 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
           </button>
         </div>
 
-        {/* Add Task Form */}
-        <form onSubmit={handleAddTask} className="mb-4 flex flex-wrap gap-2">
-          <input
-            type="text"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Task title..."
-            className="min-w-[200px] flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
-          />
-          <input
-            type="text"
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            placeholder="Description (optional)..."
-            className="min-w-[200px] flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-white placeholder:text-slate-400 focus:border-blue-500 focus:outline-none"
-          />
+        {/* Top Actions */}
+        <div className="mb-4 flex flex-wrap gap-2">
           <button
-            type="submit"
-            disabled={isPending || !newTitle.trim()}
-            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            onClick={() => setShowAddTask(true)}
+            className="rounded-lg bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
           >
-            Add Task
+            + Add Task
           </button>
           <button
             type="button"
@@ -204,7 +175,7 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
           >
             Manage Tags
           </button>
-        </form>
+        </div>
 
         {/* Filter Bar */}
         <FilterBar
@@ -282,6 +253,13 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
       </div>
 
       {/* Modals */}
+      {showAddTask && (
+        <AddTaskModal
+          tags={initialTags}
+          onClose={() => setShowAddTask(false)}
+        />
+      )}
+
       {selectedTask && (
         <TaskModal
           task={selectedTask}

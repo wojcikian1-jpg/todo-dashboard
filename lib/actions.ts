@@ -35,6 +35,10 @@ export async function createTask(input: unknown): Promise<ActionResult> {
       workspace_id: workspaceId,
       text: parsed.data.text,
       description: parsed.data.description,
+      due_date: parsed.data.dueDate,
+      priority: parsed.data.priority,
+      tag_ids: parsed.data.tagIds,
+      subtasks: parsed.data.subtasks,
     });
 
     if (error) return { success: false, error: error.message };

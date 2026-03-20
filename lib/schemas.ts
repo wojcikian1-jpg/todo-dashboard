@@ -9,12 +9,25 @@ export const taskStatusSchema = z.enum([
 
 export const taskPrioritySchema = z.enum(["high", "medium", "low"]);
 
+export const subtaskStatusSchema = z.enum(["pending", "in-progress", "completed"]);
+
 export const createTaskSchema = z.object({
   text: z.string().trim().min(1, "Task title is required").max(500),
   description: z.string().trim().max(2000).optional().default(""),
+  dueDate: z.string().date().nullable().optional().default(null),
+  priority: taskPrioritySchema.optional().default("medium"),
+  tagIds: z.array(z.string().uuid()).optional().default([]),
+  subtasks: z
+    .array(
+      z.object({
+        id: z.string(),
+        text: z.string().trim().min(1).max(500),
+        status: subtaskStatusSchema,
+      })
+    )
+    .optional()
+    .default([]),
 });
-
-export const subtaskStatusSchema = z.enum(["pending", "in-progress", "completed"]);
 
 export const updateTaskSchema = z.object({
   id: z.string().uuid(),
