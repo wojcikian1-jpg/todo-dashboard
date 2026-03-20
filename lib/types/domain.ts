@@ -56,6 +56,39 @@ export interface Task {
   readonly updatedAt: string;
 }
 
+export const RECURRING_FREQUENCY_TYPE = {
+  DAILY: "daily",
+  WEEKLY: "weekly",
+  BIWEEKLY: "biweekly",
+  MONTHLY: "monthly",
+  MONTHLY_PATTERN: "monthly-pattern",
+} as const;
+
+export type RecurringFrequencyType =
+  (typeof RECURRING_FREQUENCY_TYPE)[keyof typeof RECURRING_FREQUENCY_TYPE];
+
+export type FrequencyConfig =
+  | null
+  | { dayOfWeek: number }
+  | { dayOfMonth: number }
+  | { week: number; dayOfWeek: number };
+
+export interface RecurringTask {
+  readonly id: string;
+  readonly title: string;
+  readonly frequencyType: RecurringFrequencyType;
+  readonly frequencyConfig: FrequencyConfig;
+  readonly startDate: string;
+  readonly endDate: string | null;
+  readonly createdAt: string;
+}
+
+export interface RecurringCompletion {
+  readonly id: string;
+  readonly recurringTaskId: string;
+  readonly completedDate: string;
+}
+
 export const WORKSPACE_ROLE = {
   OWNER: "owner",
   MEMBER: "member",

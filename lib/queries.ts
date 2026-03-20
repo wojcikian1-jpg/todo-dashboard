@@ -1,6 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { getActiveWorkspaceId } from "@/lib/workspace";
-import type { Task, Tag, SubtaskStatus } from "@/lib/types/domain";
+import type {
+  Task,
+  Tag,
+  SubtaskStatus,
+  RecurringTask,
+  RecurringCompletion,
+  RecurringFrequencyType,
+  FrequencyConfig,
+} from "@/lib/types/domain";
 
 export async function getTags(): Promise<Tag[]> {
   const supabase = await createClient();
@@ -68,6 +76,64 @@ export async function getArchivedTasks(): Promise<Task[]> {
   );
 
   return (tasksResult.data ?? []).map((row) => mapRowToTask(row, tagMap));
+}
+
+export async function getRecurringTasks(): Promise<RecurringTask[]> {
+  const supabase = await createClient();
+  const workspaceId = await getActiveWorkspaceId();
+
+  const { data, error } = await supabase
+    .from("recurring_tasks")
+    .select("id, title, frequency_type, frequency_config, start_date, end_date, created_at")
+    .eq("workspace_id", workspaceId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    title: row.title as string,
+    frequencyType: row.frequency_type as RecurringFrequencyType,
+    frequencyConfig: (row.frequency_config as FrequencyConfig) ?? null,
+    startDate: row.start_date as string,
+    endDate: (row.end_date as string) ?? null,
+    createdAt: row.created_at as string,
+  }));
+}
+
+export async function getRecurringCompletions(
+  month: number,
+  year: number
+): Promise<RecurringCompletion[]> {
+  const supabase = await createClient();
+  const workspaceId = await getActiveWorkspaceId();
+
+  const startOfMonth = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const endOfMonth = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+
+  // Get recurring task IDs for this workspace
+  const { data: taskRows, error: taskError } = await supabase
+    .from("recurring_tasks")
+    .select("id")
+    .eq("workspace_id", workspaceId);
+
+  if (taskError) throw taskError;
+  const taskIds = (taskRows ?? []).map((r) => r.id as string);
+  if (taskIds.length === 0) return [];
+
+  const { data, error } = await supabase
+    .from("recurring_completions")
+    .select("id, recurring_task_id, completed_date")
+    .in("recurring_task_id", taskIds)
+    .gte("completed_date", startOfMonth)
+    .lte("completed_date", endOfMonth);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as string,
+    recurringTaskId: row.recurring_task_id as string,
+    completedDate: row.completed_date as string,
+  }));
 }
 
 function mapRowToTask(

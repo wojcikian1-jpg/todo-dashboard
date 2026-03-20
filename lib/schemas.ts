@@ -83,6 +83,45 @@ export const joinWorkspaceSchema = z.object({
   token: z.string().min(1, "Invite token is required"),
 });
 
+export const recurringFrequencyTypeSchema = z.enum([
+  "daily",
+  "weekly",
+  "biweekly",
+  "monthly",
+  "monthly-pattern",
+]);
+
+export const createRecurringTaskSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(500),
+  frequencyType: recurringFrequencyTypeSchema,
+  frequencyConfig: z
+    .union([
+      z.null(),
+      z.object({ dayOfWeek: z.number().int().min(0).max(6) }),
+      z.object({ dayOfMonth: z.number().int().min(1).max(31) }),
+      z.object({
+        week: z.number().int().min(-1).max(4).refine((v) => v !== 0, "Week cannot be 0"),
+        dayOfWeek: z.number().int().min(0).max(6),
+      }),
+    ])
+    .nullable()
+    .optional()
+    .default(null),
+  startDate: z.string().date("Must be a valid date"),
+  endDate: z.string().date().nullable().optional().default(null),
+});
+
+export const toggleRecurringCompletionSchema = z.object({
+  recurringTaskId: z.string().uuid(),
+  date: z.string().date("Must be a valid date"),
+});
+
+export const fetchRecurringCompletionsSchema = z.object({
+  month: z.number().int().min(0).max(11),
+  year: z.number().int().min(2000).max(2100),
+});
+
+export type CreateRecurringTaskInput = z.infer<typeof createRecurringTaskSchema>;
 export type CreateTaskInput = z.infer<typeof createTaskSchema>;
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type CreateTagInput = z.infer<typeof createTagSchema>;
