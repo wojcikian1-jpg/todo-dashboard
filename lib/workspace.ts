@@ -13,7 +13,7 @@ export async function getActiveWorkspaceId(): Promise<string> {
     .select("id")
     .eq("name", SHARED_WORKSPACE_NAME)
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (data) return data.id;
 
