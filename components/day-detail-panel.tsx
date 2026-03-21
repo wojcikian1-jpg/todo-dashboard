@@ -13,6 +13,7 @@ interface Props {
   tasks: RecurringTask[];
   completionSet: Set<string>; // Set of "taskId:date" strings
   onClose: () => void;
+  onChanged: () => void;
 }
 
 function formatDateHeading(dateStr: string): string {
@@ -25,7 +26,7 @@ function formatDateHeading(dateStr: string): string {
   });
 }
 
-export function DayDetailPanel({ date, tasks, completionSet, onClose }: Props) {
+export function DayDetailPanel({ date, tasks, completionSet, onClose, onChanged }: Props) {
   const [isPending, startTransition] = useTransition();
 
   function isCompleted(taskId: string): boolean {
@@ -38,6 +39,7 @@ export function DayDetailPanel({ date, tasks, completionSet, onClose }: Props) {
         recurringTaskId: taskId,
         date,
       });
+      onChanged();
     });
   }
 
@@ -45,6 +47,7 @@ export function DayDetailPanel({ date, tasks, completionSet, onClose }: Props) {
     if (!confirm("Delete this entire recurring task series?")) return;
     startTransition(async () => {
       await deleteRecurringTask(taskId);
+      onChanged();
     });
   }
 

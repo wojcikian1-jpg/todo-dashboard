@@ -217,6 +217,7 @@ export function RecurringCalendar({ recurringTasks }: Props) {
           tasks={selectedDateTasks}
           completionSet={completionSet}
           onClose={() => setSelectedDate(null)}
+          onChanged={loadCompletions}
         />
       )}
 
