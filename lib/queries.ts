@@ -82,20 +82,35 @@ export async function getRecurringTasks(): Promise<RecurringTask[]> {
   const supabase = await createClient();
   const workspaceId = await getActiveWorkspaceId();
 
-  const { data, error } = await supabase
-    .from("recurring_tasks")
-    .select("id, title, frequency_type, frequency_config, start_date, end_date, created_at")
-    .eq("workspace_id", workspaceId)
-    .order("created_at", { ascending: false });
+  const [tagsResult, tasksResult] = await Promise.all([
+    supabase
+      .from("tags")
+      .select("id, name, color")
+      .eq("workspace_id", workspaceId),
+    supabase
+      .from("recurring_tasks")
+      .select("id, title, frequency_type, frequency_config, start_date, end_date, tag_ids, created_at")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: false }),
+  ]);
 
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
+  if (tagsResult.error) throw tagsResult.error;
+  if (tasksResult.error) throw tasksResult.error;
+
+  const tagMap = new Map<string, Tag>(
+    (tagsResult.data ?? []).map((t) => [t.id, t])
+  );
+
+  return (tasksResult.data ?? []).map((row) => ({
     id: row.id as string,
     title: row.title as string,
     frequencyType: row.frequency_type as RecurringFrequencyType,
     frequencyConfig: (row.frequency_config as FrequencyConfig) ?? null,
     startDate: row.start_date as string,
     endDate: (row.end_date as string) ?? null,
+    tags: ((row.tag_ids as string[]) ?? [])
+      .map((id: string) => tagMap.get(id))
+      .filter((t: Tag | undefined): t is Tag => t !== undefined),
     createdAt: row.created_at as string,
   }));
 }

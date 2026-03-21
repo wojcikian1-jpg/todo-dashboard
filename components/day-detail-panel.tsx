@@ -139,6 +139,19 @@ export function DayDetailPanel({ date, tasks, completionSet, onClose, onChanged 
                     >
                       {task.title}
                     </p>
+                    {task.tags.length > 0 && (
+                      <div className="mt-0.5 flex flex-wrap gap-1">
+                        {task.tags.map((tag) => (
+                          <span
+                            key={tag.id}
+                            className="rounded px-1.5 py-0.5 text-[10px] font-medium text-white"
+                            style={{ backgroundColor: tag.color }}
+                          >
+                            {tag.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                     <p className="text-[10px] text-slate-400">
                       {describeFrequency(task)}
                       {task.endDate && ` (until ${task.endDate})`}

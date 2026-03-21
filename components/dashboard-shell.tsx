@@ -56,7 +56,7 @@ export function DashboardShell({
         {activeView === "board" ? (
           <KanbanBoard initialTasks={initialTasks} initialTags={initialTags} />
         ) : (
-          <RecurringCalendar recurringTasks={initialRecurringTasks} />
+          <RecurringCalendar recurringTasks={initialRecurringTasks} tags={initialTags} />
         )}
       </div>
     </div>

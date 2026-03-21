@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { createRecurringTask } from "@/lib/actions";
-import type { RecurringFrequencyType, FrequencyConfig } from "@/lib/types/domain";
+import type { Tag, RecurringFrequencyType, FrequencyConfig } from "@/lib/types/domain";
 
 interface Props {
+  tags: Tag[];
   onClose: () => void;
 }
 
@@ -17,7 +18,7 @@ const OCCURRENCE_OPTIONS = [
   { value: -1, label: "Last" },
 ];
 
-export function AddRecurringTaskModal({ onClose }: Props) {
+export function AddRecurringTaskModal({ tags, onClose }: Props) {
   const [isPending, startTransition] = useTransition();
 
   const [title, setTitle] = useState("");
@@ -26,6 +27,7 @@ export function AddRecurringTaskModal({ onClose }: Props) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [noEndDate, setNoEndDate] = useState(true);
+  const [tagIds, setTagIds] = useState<string[]>([]);
 
   // Weekly/biweekly config
   const [dayOfWeek, setDayOfWeek] = useState(0);
@@ -59,6 +61,12 @@ export function AddRecurringTaskModal({ onClose }: Props) {
     }
   }
 
+  function handleToggleTag(tagId: string) {
+    setTagIds((ids) =>
+      ids.includes(tagId) ? ids.filter((id) => id !== tagId) : [...ids, tagId]
+    );
+  }
+
   function handleSubmit() {
     if (!title.trim() || !startDate) return;
     startTransition(async () => {
@@ -68,6 +76,7 @@ export function AddRecurringTaskModal({ onClose }: Props) {
         frequencyConfig: buildFrequencyConfig(),
         startDate,
         endDate: noEndDate ? null : endDate || null,
+        tagIds,
       });
       onClose();
     });
@@ -277,6 +286,40 @@ export function AddRecurringTaskModal({ onClose }: Props) {
                 />
               )}
             </div>
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-slate-700">
+              Tags
+            </label>
+            {tags.length === 0 ? (
+              <p className="text-sm italic text-slate-400">
+                No tags created yet.
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {tags.map((tag) => (
+                  <label
+                    key={tag.id}
+                    className={`cursor-pointer rounded-lg px-3 py-1 text-sm font-medium text-white transition-opacity ${
+                      tagIds.includes(tag.id)
+                        ? "opacity-100 ring-2 ring-white ring-offset-2"
+                        : "opacity-50"
+                    }`}
+                    style={{ backgroundColor: tag.color }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={tagIds.includes(tag.id)}
+                      onChange={() => handleToggleTag(tag.id)}
+                      className="sr-only"
+                    />
+                    {tag.name}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Actions */}

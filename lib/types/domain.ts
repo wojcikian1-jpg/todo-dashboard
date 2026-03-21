@@ -80,6 +80,7 @@ export interface RecurringTask {
   readonly frequencyConfig: FrequencyConfig;
   readonly startDate: string;
   readonly endDate: string | null;
+  readonly tags: readonly Tag[];
   readonly createdAt: string;
 }
 

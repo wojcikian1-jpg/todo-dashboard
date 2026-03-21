@@ -245,6 +245,7 @@ export async function createRecurringTask(
       frequency_config: parsed.data.frequencyConfig,
       start_date: parsed.data.startDate,
       end_date: parsed.data.endDate,
+      tag_ids: parsed.data.tagIds,
     });
 
     if (error) return { success: false, error: error.message };

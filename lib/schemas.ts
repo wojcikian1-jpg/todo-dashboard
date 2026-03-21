@@ -109,6 +109,7 @@ export const createRecurringTaskSchema = z.object({
     .default(null),
   startDate: z.string().date("Must be a valid date"),
   endDate: z.string().date().nullable().optional().default(null),
+  tagIds: z.array(z.string().uuid()).optional().default([]),
 });
 
 export const toggleRecurringCompletionSchema = z.object({
