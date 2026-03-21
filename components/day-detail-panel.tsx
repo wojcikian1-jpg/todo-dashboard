@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   toggleRecurringCompletion,
   deleteRecurringTask,
@@ -28,26 +28,52 @@ function formatDateHeading(dateStr: string): string {
 
 export function DayDetailPanel({ date, tasks, completionSet, onClose, onChanged }: Props) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  // Local optimistic overrides: taskId -> true/false
+  const [localToggles, setLocalToggles] = useState<Record<string, boolean>>({});
 
   function isCompleted(taskId: string): boolean {
+    if (taskId in localToggles) return localToggles[taskId];
     return completionSet.has(`${taskId}:${date}`);
   }
 
   function handleToggle(taskId: string) {
+    setError(null);
+    const wasCompleted = isCompleted(taskId);
+    // Optimistic update
+    setLocalToggles((prev) => ({ ...prev, [taskId]: !wasCompleted }));
+
     startTransition(async () => {
-      await toggleRecurringCompletion({
+      const result = await toggleRecurringCompletion({
         recurringTaskId: taskId,
         date,
       });
-      onChanged();
+      if (!result.success) {
+        // Revert optimistic update
+        setLocalToggles((prev) => ({ ...prev, [taskId]: wasCompleted }));
+        setError(result.error);
+      } else {
+        // Clear local override, let parent data take over
+        setLocalToggles((prev) => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+        onChanged();
+      }
     });
   }
 
   function handleDelete(taskId: string) {
     if (!confirm("Delete this entire recurring task series?")) return;
+    setError(null);
     startTransition(async () => {
-      await deleteRecurringTask(taskId);
-      onChanged();
+      const result = await deleteRecurringTask(taskId);
+      if (!result.success) {
+        setError(result.error);
+      } else {
+        onChanged();
+      }
     });
   }
 
@@ -71,6 +97,12 @@ export function DayDetailPanel({ date, tasks, completionSet, onClose, onChanged 
           &times;
         </button>
       </div>
+
+      {error && (
+        <div className="mb-3 rounded-lg bg-red-500/20 px-3 py-2 text-sm text-red-400">
+          {error}
+        </div>
+      )}
 
       {tasks.length === 0 ? (
         <p className="text-sm italic text-slate-500">
