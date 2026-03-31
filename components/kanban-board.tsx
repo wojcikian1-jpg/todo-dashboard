@@ -287,7 +287,7 @@ function KanbanColumn({
           {count}
         </span>
       </div>
-      <div ref={setNodeRef} className="flex max-h-[580px] flex-col gap-2 overflow-y-auto">
+      <div ref={setNodeRef} className="flex min-h-[120px] max-h-[580px] flex-col gap-2 overflow-y-auto">
         {children}
       </div>
     </div>
