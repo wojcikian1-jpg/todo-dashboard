@@ -139,13 +139,7 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
   ).length;
 
   return (
-    <div className="min-h-screen p-4 md:p-6">
-      <div className="mx-auto max-w-7xl">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Team Dashboard</h1>
-        </div>
-
+    <div>
         {/* Top Actions */}
         <div className="mb-4 flex flex-wrap gap-2">
           <button
@@ -236,7 +230,6 @@ export function KanbanBoard({ initialTasks, initialTags }: Props) {
             </button>
           </div>
         </div>
-      </div>
 
       {/* Modals */}
       {showAddTask && (
@@ -294,7 +287,7 @@ function KanbanColumn({
           {count}
         </span>
       </div>
-      <div ref={setNodeRef} className="flex max-h-[580px] flex-col gap-2 overflow-y-auto">
+      <div ref={setNodeRef} className="flex min-h-[120px] max-h-[580px] flex-col gap-2 overflow-y-auto">
         {children}
       </div>
     </div>

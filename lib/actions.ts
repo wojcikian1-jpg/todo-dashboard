@@ -7,9 +7,12 @@ import {
   updateTaskSchema,
   updateTaskStatusSchema,
   createTagSchema,
+  createRecurringTaskSchema,
+  toggleRecurringCompletionSchema,
+  fetchRecurringCompletionsSchema,
 } from "@/lib/schemas";
 import { getActiveWorkspaceId } from "@/lib/workspace";
-import type { ActionResult, Task } from "@/lib/types/domain";
+import type { ActionResult, Task, RecurringCompletion } from "@/lib/types/domain";
 
 async function getAuthUserId(): Promise<string | null> {
   const supabase = await createClient();
@@ -217,5 +220,128 @@ export async function deleteTag(id: unknown): Promise<ActionResult> {
     return { success: true, data: undefined };
   } catch {
     return { success: false, error: "Failed to delete tag" };
+  }
+}
+
+// ── Recurring Tasks ──────────────────────────────────────
+
+export async function createRecurringTask(
+  input: unknown
+): Promise<ActionResult> {
+  const parsed = createRecurringTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    const userId = await getAuthUserId();
+    const workspaceId = await getActiveWorkspaceId();
+    const supabase = await createClient();
+    const { error } = await supabase.from("recurring_tasks").insert({
+      user_id: userId,
+      workspace_id: workspaceId,
+      title: parsed.data.title,
+      frequency_type: parsed.data.frequencyType,
+      frequency_config: parsed.data.frequencyConfig,
+      start_date: parsed.data.startDate,
+      end_date: parsed.data.endDate,
+      tag_ids: parsed.data.tagIds,
+    });
+
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to create recurring task" };
+  }
+}
+
+export async function deleteRecurringTask(
+  id: unknown
+): Promise<ActionResult> {
+  if (typeof id !== "string") {
+    return { success: false, error: "Invalid recurring task ID" };
+  }
+
+  try {
+    await getAuthUserId();
+    const supabase = await createClient();
+    const { error } = await supabase
+      .from("recurring_tasks")
+      .delete()
+      .eq("id", id);
+
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to delete recurring task" };
+  }
+}
+
+export async function toggleRecurringCompletion(
+  input: unknown
+): Promise<ActionResult> {
+  const parsed = toggleRecurringCompletionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    await getAuthUserId();
+    const supabase = await createClient();
+    const { recurringTaskId, date } = parsed.data;
+
+    // Check if completion exists
+    const { data: existing } = await supabase
+      .from("recurring_completions")
+      .select("id")
+      .eq("recurring_task_id", recurringTaskId)
+      .eq("completed_date", date)
+      .maybeSingle();
+
+    if (existing) {
+      // Un-complete: delete the record
+      const { error } = await supabase
+        .from("recurring_completions")
+        .delete()
+        .eq("id", existing.id);
+      if (error) return { success: false, error: error.message };
+    } else {
+      // Complete: insert the record
+      const { error } = await supabase
+        .from("recurring_completions")
+        .insert({
+          recurring_task_id: recurringTaskId,
+          completed_date: date,
+        });
+      if (error) return { success: false, error: error.message };
+    }
+
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to toggle completion" };
+  }
+}
+
+export async function fetchRecurringCompletions(
+  input: unknown
+): Promise<ActionResult<RecurringCompletion[]>> {
+  const parsed = fetchRecurringCompletionsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  try {
+    await getAuthUserId();
+    const { getRecurringCompletions } = await import("@/lib/queries");
+    const completions = await getRecurringCompletions(
+      parsed.data.month,
+      parsed.data.year
+    );
+    return { success: true, data: completions };
+  } catch {
+    return { success: false, error: "Failed to fetch completions" };
   }
 }
