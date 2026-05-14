@@ -7,6 +7,9 @@ const SHARED_WORKSPACE_NAME = "Team Dashboard";
 export async function getActiveWorkspaceId(): Promise<string> {
   const supabase = await createClient();
 
+  // TODO: clean up duplicate "Team Dashboard" workspaces that this function
+  // may have created when signed-in non-members fell through the lookup and
+  // re-inserted. Merge their tasks/tags/members into the oldest row.
   // Get the single shared workspace
   const { data } = await supabase
     .from("workspaces")
