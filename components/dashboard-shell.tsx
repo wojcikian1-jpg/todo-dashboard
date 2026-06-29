@@ -1,22 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import type { Task, Tag, RecurringTask } from "@/lib/types/domain";
+import type { Task, Tag, RecurringTask, Project } from "@/lib/types/domain";
 import { KanbanBoard } from "./kanban-board";
 import { RecurringCalendar } from "./recurring-calendar";
+import { ProjectsView } from "./projects-view";
 
 interface Props {
   initialTasks: Task[];
   initialTags: Tag[];
   initialRecurringTasks: RecurringTask[];
+  initialProjects: Project[];
 }
 
-type View = "board" | "recurring";
+type View = "board" | "recurring" | "projects";
 
 export function DashboardShell({
   initialTasks,
   initialTags,
   initialRecurringTasks,
+  initialProjects,
 }: Props) {
   const [activeView, setActiveView] = useState<View>("board");
 
@@ -50,13 +53,30 @@ export function DashboardShell({
           >
             Recurring
           </button>
+          <button
+            onClick={() => setActiveView("projects")}
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeView === "projects"
+                ? "bg-blue-600 text-white"
+                : "text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            Projects
+          </button>
         </div>
 
         {/* View Content */}
-        {activeView === "board" ? (
+        {activeView === "board" && (
           <KanbanBoard initialTasks={initialTasks} initialTags={initialTags} />
-        ) : (
-          <RecurringCalendar recurringTasks={initialRecurringTasks} tags={initialTags} />
+        )}
+        {activeView === "recurring" && (
+          <RecurringCalendar
+            recurringTasks={initialRecurringTasks}
+            tags={initialTags}
+          />
+        )}
+        {activeView === "projects" && (
+          <ProjectsView initialProjects={initialProjects} />
         )}
       </div>
     </div>

@@ -115,3 +115,73 @@ export interface WorkspaceInvite {
 export type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+export const PROJECT_STATUS = {
+  PLANNING: "planning",
+  ACTIVE: "active",
+  BLOCKED: "blocked",
+  ON_HOLD: "on-hold",
+  DONE: "done",
+  ARCHIVED: "archived",
+} as const;
+
+export type ProjectStatus = (typeof PROJECT_STATUS)[keyof typeof PROJECT_STATUS];
+
+export const ISSUE_STATUS = {
+  OPEN: "open",
+  RESOLVED: "resolved",
+} as const;
+
+export type IssueStatus = (typeof ISSUE_STATUS)[keyof typeof ISSUE_STATUS];
+
+export interface Workflow {
+  readonly id: string;
+  readonly projectId: string;
+  readonly name: string;
+  readonly position: number;
+  readonly createdAt: string;
+}
+
+export interface ProjectTask {
+  readonly id: string;
+  readonly workflowId: string | null;
+  readonly text: string;
+  readonly status: TaskStatus;
+  readonly priority: TaskPriority;
+  readonly dueDate: string | null;
+}
+
+export interface Issue {
+  readonly id: string;
+  readonly projectId: string;
+  readonly title: string;
+  readonly description: string;
+  readonly status: IssueStatus;
+  readonly openedAt: string;
+  readonly resolvedAt: string | null;
+}
+
+export interface ProjectNote {
+  readonly id: string;
+  readonly projectId: string;
+  readonly body: string;
+  readonly createdAt: string;
+}
+
+export interface Project {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly goal: string;
+  readonly status: ProjectStatus;
+  readonly startDate: string | null;
+  readonly targetDate: string | null;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly workflows: readonly Workflow[];
+  readonly tasks: readonly ProjectTask[];
+  readonly issues: readonly Issue[];
+  readonly notes: readonly ProjectNote[];
+  readonly taskCount: number;
+  readonly openIssueCount: number;
+}

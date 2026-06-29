@@ -10,6 +10,16 @@ import {
   createRecurringTaskSchema,
   toggleRecurringCompletionSchema,
   fetchRecurringCompletionsSchema,
+  createProjectSchema,
+  updateProjectSchema,
+  deleteProjectSchema,
+  createSubWorkflowSchema,
+  deleteSubWorkflowSchema,
+  createProjectTaskSchema,
+  createIssueSchema,
+  updateIssueStatusSchema,
+  createProjectNoteSchema,
+  deleteProjectNoteSchema,
 } from "@/lib/schemas";
 import { getActiveWorkspaceId } from "@/lib/workspace";
 import type { ActionResult, Task, RecurringCompletion } from "@/lib/types/domain";
@@ -343,5 +353,218 @@ export async function fetchRecurringCompletions(
     return { success: true, data: completions };
   } catch {
     return { success: false, error: "Failed to fetch completions" };
+  }
+}
+
+export async function createProject(input: unknown): Promise<ActionResult> {
+  const parsed = createProjectSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const workspaceId = await getActiveWorkspaceId();
+    const supabase = await createClient();
+    const { error } = await supabase.from("projects").insert({
+      workspace_id: workspaceId,
+      name: parsed.data.name,
+      description: parsed.data.description,
+      goal: parsed.data.goal,
+      status: parsed.data.status,
+      start_date: parsed.data.startDate,
+      target_date: parsed.data.targetDate,
+    });
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to create project" };
+  }
+}
+
+export async function updateProject(input: unknown): Promise<ActionResult> {
+  const parsed = updateProjectSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const { id, ...fields } = parsed.data;
+    const { error } = await supabase
+      .from("projects")
+      .update({
+        name: fields.name,
+        description: fields.description,
+        goal: fields.goal,
+        status: fields.status,
+        start_date: fields.startDate,
+        target_date: fields.targetDate,
+      })
+      .eq("id", id);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to update project" };
+  }
+}
+
+export async function deleteProject(input: unknown): Promise<ActionResult> {
+  const parsed = deleteProjectSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("projects").delete().eq("id", parsed.data.id);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to delete project" };
+  }
+}
+
+export async function createSubWorkflow(input: unknown): Promise<ActionResult> {
+  const parsed = createSubWorkflowSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const { data: existing } = await supabase
+      .from("sub_workflows")
+      .select("position")
+      .eq("project_id", parsed.data.projectId)
+      .order("position", { ascending: false })
+      .limit(1);
+    const nextPosition =
+      existing && existing.length > 0 ? (existing[0].position as number) + 1 : 0;
+    const { error } = await supabase.from("sub_workflows").insert({
+      project_id: parsed.data.projectId,
+      name: parsed.data.name,
+      position: nextPosition,
+    });
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to create sub-workflow" };
+  }
+}
+
+export async function deleteSubWorkflow(input: unknown): Promise<ActionResult> {
+  const parsed = deleteSubWorkflowSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("sub_workflows").delete().eq("id", parsed.data.id);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to delete sub-workflow" };
+  }
+}
+
+export async function createIssue(input: unknown): Promise<ActionResult> {
+  const parsed = createIssueSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("issues").insert({
+      project_id: parsed.data.projectId,
+      title: parsed.data.title,
+      description: parsed.data.description,
+    });
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to create issue" };
+  }
+}
+
+export async function updateIssueStatus(input: unknown): Promise<ActionResult> {
+  const parsed = updateIssueStatusSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const resolvedAt = parsed.data.status === "resolved" ? new Date().toISOString() : null;
+    const { error } = await supabase
+      .from("issues")
+      .update({ status: parsed.data.status, resolved_at: resolvedAt })
+      .eq("id", parsed.data.id);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to update issue" };
+  }
+}
+
+export async function createProjectNote(input: unknown): Promise<ActionResult> {
+  const parsed = createProjectNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("project_notes").insert({
+      project_id: parsed.data.projectId,
+      body: parsed.data.body,
+    });
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to create note" };
+  }
+}
+
+export async function deleteProjectNote(input: unknown): Promise<ActionResult> {
+  const parsed = deleteProjectNoteSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const supabase = await createClient();
+    const { error } = await supabase.from("project_notes").delete().eq("id", parsed.data.id);
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to delete note" };
+  }
+}
+
+export async function createProjectTask(input: unknown): Promise<ActionResult> {
+  const parsed = createProjectTaskSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+  try {
+    const userId = await getAuthUserId();
+    const workspaceId = await getActiveWorkspaceId();
+    const supabase = await createClient();
+    const { error } = await supabase.from("tasks").insert({
+      user_id: userId,
+      workspace_id: workspaceId,
+      project_id: parsed.data.projectId,
+      subworkflow_id: parsed.data.workflowId,
+      text: parsed.data.text,
+      status: "not-started",
+      priority: "medium",
+    });
+    if (error) return { success: false, error: error.message };
+    revalidatePath("/dashboard");
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: "Failed to create task" };
   }
 }
